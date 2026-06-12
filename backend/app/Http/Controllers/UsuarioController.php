@@ -98,4 +98,18 @@ class UsuarioController extends Controller
 
         return response()->json(['message' => 'Usuario eliminado']);
     }
+
+    public function desbloquear($id)
+    {
+        $usuario = Usuario::findOrFail($id);
+
+        $usuario->update([
+            'intentos_fallidos' => 0,
+            'bloqueado_hasta' => null,
+        ]);
+
+        $this->log(request(), 'Desbloqueo', 'usuarios', $id, "Usuario desbloqueado: {$usuario->usuario}");
+
+        return response()->json(['message' => 'Usuario desbloqueado']);
+    }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Layout from './pages/Layout';
@@ -10,7 +10,7 @@ import Usuarios from './pages/Usuarios';
 import Roles from './pages/Roles';
 import Logs from './pages/Logs';
 import PhotocheckViewer from './pages/PhotocheckViewer';
-import { getUsuario } from './services/authService';
+import { getUsuario, logout, isSessionExpired } from './services/authService';
 import './App.css';
 
 function ProtectedRoute({ children }) {
@@ -20,6 +20,16 @@ function ProtectedRoute({ children }) {
 
 function App() {
   const [usuario, setUsuario] = useState(() => getUsuario());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isSessionExpired()) {
+        logout();
+        setUsuario(null);
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <BrowserRouter>

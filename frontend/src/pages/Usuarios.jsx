@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaUnlock } from 'react-icons/fa';
 import './CrudPage.css';
 
 const initial = { usuario: '', clave: '', nombres: '', apellidos: '', estado: 'ACTIVO', roles: [] };
@@ -61,6 +61,12 @@ export default function Usuarios() {
     load(page);
   };
 
+  const handleDesbloquear = async (id) => {
+    if (!confirm('Desbloquear este usuario?')) return;
+    await api.post(`/usuarios/${id}/desbloquear`);
+    load(page);
+  };
+
   const toggleRole = (rolId) => {
     const roles = form.roles.includes(rolId) ? form.roles.filter((r) => r !== rolId) : [...form.roles, rolId];
     setForm({ ...form, roles });
@@ -97,8 +103,16 @@ export default function Usuarios() {
                 <td data-label="Nombres">{u.nombres}</td>
                 <td data-label="Apellidos">{u.apellidos}</td>
                 <td data-label="Roles">{u.roles?.map((r) => r.nombre).join(', ') || '-'}</td>
-                <td data-label="Estado"><span className={`badge badge-${u.estado.toLowerCase()}`}>{u.estado}</span></td>
+                <td data-label="Estado">
+                  <span className={`badge badge-${u.estado.toLowerCase()}`}>{u.estado}</span>
+                  {u.bloqueado_hasta && new Date(u.bloqueado_hasta) > new Date() && (
+                    <span className="badge badge-bloqueado" style={{ marginLeft: 6 }}>BLOQUEADO</span>
+                  )}
+                </td>
                 <td data-label="Acciones" className="actions">
+                  {u.bloqueado_hasta && new Date(u.bloqueado_hasta) > new Date() && (
+                    <button className="btn-icon" title="Desbloquear" onClick={() => handleDesbloquear(u.id)} style={{ color: '#f59e0b', borderColor: '#f59e0b' }}><FaUnlock /></button>
+                  )}
                   <button className="btn-icon" onClick={() => openEdit(u)}><FaEdit /></button>
                   <button className="btn-icon btn-danger" onClick={() => handleDelete(u.id)}><FaTrash /></button>
                 </td>
