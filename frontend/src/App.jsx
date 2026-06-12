@@ -36,7 +36,7 @@ function App() {
       <Routes>
         <Route path="/:codigo" element={<PhotocheckViewer />} />
         <Route path="/login" element={usuario ? <Navigate to="/" /> : <Login onLogin={setUsuario} />} />
-        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path="/" element={<ProtectedRoute><Layout onLogout={() => { logout(); setUsuario(null); }} /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="trabajadores" element={<Trabajadores />} />
           <Route path="fotochecks" element={<Fotochecks />} />

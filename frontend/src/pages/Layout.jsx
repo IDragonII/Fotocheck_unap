@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { getUsuario, logout } from '../services/authService';
+import { getUsuario } from '../services/authService';
 import { FaHome, FaUsers, FaIdCard, FaUserShield, FaKey, FaQrcode, FaClipboardList, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
 import { useState } from 'react';
 import './Layout.css';
@@ -14,13 +14,13 @@ const navItems = [
   { to: '/logs', icon: <FaClipboardList />, label: 'Logs' },
 ];
 
-export default function Layout() {
+export default function Layout({ onLogout }) {
   const usuario = getUsuario();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
-    logout();
+    onLogout();
     navigate('/login');
   };
 
