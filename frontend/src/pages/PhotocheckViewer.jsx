@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import * as THREE from 'three';
 import logoUrl from '../assets/logo.png';
+import firmaUrl from '../assets/firma.png';
+import { proxyImageUrl } from '../services/api';
 import './PhotocheckViewer.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -11,11 +13,11 @@ const CARD_H = 1140;
 const CORNER_R = 28;
 
 const COLORS = {
-  primary: '#1a2a4a',
-  primaryDark: '#0f1a30',
-  primaryLight: '#2a4a7a',
+  primary: '#3a6fa0',
+  primaryDark: '#1a3a5a',
+  primaryLight: '#5a9fd4',
   accent: '#c9a85a',
-  text: '#0f1a30',
+  text: '#1a2a40',
   textMuted: '#6b7a99',
   bg: '#f5f3ec',
 };
@@ -238,10 +240,7 @@ function drawFrontCard(ctx, persona) {
   ctx.fillStyle = '#cfe0ff'; ctx.font = '600 22px "Montserrat", sans-serif';
   ctx.fillText(persona.cargo, w / 2, infoY + 78);
   ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '500 18px "Montserrat", sans-serif';
-  ctx.fillText(persona.area, w / 2, infoY + 110);
-  ctx.fillStyle = COLORS.accent; ctx.fillRect(w / 2 - 80, infoY + 138, 160, 28);
-  ctx.fillStyle = COLORS.primary; ctx.font = '700 16px "Montserrat", sans-serif';
-  ctx.fillText(`DNI · ${persona.dni}`, w / 2, infoY + 152); ctx.restore();
+  ctx.fillText(persona.area, w / 2, infoY + 110); ctx.restore();
   ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.font = '500 14px "Montserrat", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('Válido únicamente con firma y sello institucional', w / 2, h - 78); ctx.restore();
@@ -249,10 +248,7 @@ function drawFrontCard(ctx, persona) {
 
 function drawBackCard(ctx, persona) {
   const w = CARD_W, h = CARD_H;
-  ctx.fillStyle = COLORS.bg; roundRect(ctx, 0, 0, w, h, CORNER_R); ctx.fill();
-  drawWatermark(ctx, persona.logoImg, w, h);
-  ctx.save(); ctx.beginPath(); roundRect(ctx, 0, 0, w, h, CORNER_R); ctx.clip();
-  ctx.fillStyle = 'rgba(26,42,74,0.02)'; ctx.fillRect(0, 0, w, h); ctx.restore();
+  ctx.fillStyle = '#ffffff'; roundRect(ctx, 0, 0, w, h, CORNER_R); ctx.fill();
   const headerH = 140;
   ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(0, 0, w, headerH);
   ctx.fillStyle = COLORS.accent; ctx.fillRect(0, headerH - 5, w, 5); ctx.restore();
@@ -261,48 +257,88 @@ function drawBackCard(ctx, persona) {
   ctx.font = '700 30px "Playfair Display", serif';
   ctx.fillText(INST.nameLine1, 150, 56); ctx.fillText(INST.nameLine2, 150, 92);
   ctx.font = '600 16px "Montserrat", sans-serif'; ctx.fillStyle = COLORS.accent;
-  ctx.fillText(`CONTRATO INSTITUCIONAL · ${INST.location.toUpperCase()}`, 150, 120); ctx.restore();
+  ctx.fillText(`INFORMACION DEL SERVIDOR · ${INST.location.toUpperCase()}`, 150, 120); ctx.restore();
   drawCardBorder(ctx, w, h, false);
-  const blockY = headerH + 40;
-  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(40, blockY, 6, 30);
-  ctx.font = '800 22px "Montserrat", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('CONDICIONES DE USO', 60, blockY + 15);
-  ctx.fillStyle = COLORS.text; ctx.font = '500 19px "Montserrat", sans-serif'; ctx.textBaseline = 'top';
-  const lines = wrapText(ctx, INST.legalText, w - 80);
-  let ty = blockY + 50;
-  for (const line of lines) { ctx.fillText(line, 40, ty); ty += 28; }
+
+  let curY = headerH + 40;
+
+  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(40, curY, 6, 30);
+  ctx.font = '800 20px "Montserrat", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('DATOS PERSONALES', 60, curY + 15);
+  ctx.fillStyle = COLORS.text; ctx.font = '500 18px "Montserrat", sans-serif'; ctx.textBaseline = 'top';
+  ctx.fillText(`DNI: ${persona.dni || '---'}`, 50, curY + 48);
+  ctx.fillText(`Cargo: ${persona.cargo || '---'}`, 50, curY + 78);
+  ctx.fillText(`Area: ${persona.area || '---'}`, 50, curY + 108);
   ctx.restore();
-  const sigY = ty + 20;
-  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(40, sigY, 6, 30);
-  ctx.font = '800 22px "Montserrat", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('FIRMA AUTORIZADA', 60, sigY + 15); ctx.restore();
-  const sw = w - 120, sh = 90, sx = 60, sy = sigY + 50;
-  ctx.save(); ctx.strokeStyle = COLORS.primary; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath();
-  const base = sy + sh * 0.65;
-  ctx.moveTo(sx, base);
-  ctx.bezierCurveTo(sx + sw * 0.15, sy + sh * 0.2, sx + sw * 0.3, sy + sh * 0.9, sx + sw * 0.45, sy + sh * 0.35);
-  ctx.bezierCurveTo(sx + sw * 0.55, sy + sh * 0.05, sx + sw * 0.7, sy + sh * 0.7, sx + sw * 0.85, sy + sh * 0.4);
-  ctx.stroke();
+  curY += 150;
+
+  ctx.save(); ctx.fillStyle = '#e8e4dc'; ctx.fillRect(40, curY, w - 80, 1); ctx.restore();
+  curY += 20;
+
+  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(40, curY, 6, 30);
+  ctx.font = '800 20px "Montserrat", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('CONTACTO', 60, curY + 15);
+  ctx.fillStyle = COLORS.text; ctx.font = '500 18px "Montserrat", sans-serif'; ctx.textBaseline = 'top';
+  ctx.fillText(`Correo: ${persona.correo || '---'}`, 50, curY + 48);
+  ctx.fillText(`Telefono: ${(persona.telefono || '---').replace(/^51/, '')}`, 50, curY + 78);
+  ctx.restore();
+  curY += 118;
+
+  ctx.save(); ctx.fillStyle = '#e8e4dc'; ctx.fillRect(40, curY, w - 80, 1); ctx.restore();
+  curY += 20;
+
+  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(40, curY, 6, 30);
+  ctx.font = '800 20px "Montserrat", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('INFORMACION EXTRA', 60, curY + 15);
+  ctx.fillStyle = COLORS.text; ctx.font = '500 17px "Montserrat", sans-serif'; ctx.textBaseline = 'top';
+  const extraLines = wrapText(ctx, INST.legalText, w - 100);
+  let ty = curY + 48;
+  for (const line of extraLines) { ctx.fillText(line, 50, ty); ty += 26; }
+  ctx.restore();
+  curY = ty + 20;
+
+  ctx.save(); ctx.fillStyle = '#e8e4dc'; ctx.fillRect(40, curY, w - 80, 1); ctx.restore();
+  curY += 20;
+
+  const footerH = 70;
+  const firmaBlockH = 200;
+  const firmaY = h - footerH - firmaBlockH;
+  const firmaW = 360, firmaH = 140;
+  const firmaX = (w - firmaW) / 2;
+
+  if (persona.firmaImg && persona.firmaImg.complete && persona.firmaImg.naturalWidth > 0) {
+    ctx.save();
+    const ratio = persona.firmaImg.width / persona.firmaImg.height;
+    let sx, sy, sw, sh;
+    if (ratio > firmaW / firmaH) { sh = persona.firmaImg.height; sw = sh * (firmaW / firmaH); sx = (persona.firmaImg.width - sw) / 2; sy = 0; }
+    else { sw = persona.firmaImg.width; sh = sw / (firmaW / firmaH); sx = 0; sy = (persona.firmaImg.height - sh) / 2; }
+    ctx.drawImage(persona.firmaImg, sx, sy, sw, sh, firmaX, firmaY, firmaW, firmaH);
+    ctx.restore();
+  } else {
+    ctx.save(); ctx.strokeStyle = COLORS.primary; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    const base = firmaY + firmaH * 0.65;
+    ctx.moveTo(firmaX, base);
+    ctx.bezierCurveTo(firmaX + firmaW * 0.15, firmaY + firmaH * 0.2, firmaX + firmaW * 0.3, firmaY + firmaH * 0.9, firmaX + firmaW * 0.45, firmaY + firmaH * 0.35);
+    ctx.bezierCurveTo(firmaX + firmaW * 0.55, firmaY + firmaH * 0.05, firmaX + firmaW * 0.7, firmaY + firmaH * 0.7, firmaX + firmaW * 0.85, firmaY + firmaH * 0.4);
+    ctx.stroke();
+    ctx.restore();
+  }
+  const lineaY = firmaY + firmaH + 6;
+  const lineaW = firmaW + 40;
+  const lineaX = (w - lineaW) / 2;
   ctx.strokeStyle = COLORS.textMuted; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(sx, sy + sh + 8); ctx.lineTo(sx + sw, sy + sh + 8); ctx.stroke();
-  ctx.fillStyle = COLORS.textMuted; ctx.font = '600 22px "Montserrat", sans-serif';
+  ctx.beginPath(); ctx.moveTo(lineaX, lineaY); ctx.lineTo(lineaX + lineaW, lineaY); ctx.stroke();
+  ctx.fillStyle = COLORS.textMuted; ctx.font = '600 18px "Montserrat", sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('Firma del titular', sx + sw / 2, sy + sh + 18); ctx.restore();
-  const contactY = h - 200;
-  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(0, contactY - 8, w, 200);
-  ctx.fillStyle = COLORS.accent; ctx.fillRect(0, contactY - 8, w, 4);
-  ctx.fillStyle = '#ffffff'; ctx.font = '700 18px "Montserrat", sans-serif';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('EN CASO DE PÉRDIDA', 40, contactY + 14);
-  ctx.font = '500 17px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.fillText(INST.lostText, 40, contactY + 48);
-  ctx.fillStyle = COLORS.accent; ctx.fillRect(40, contactY + 92, w - 80, 1);
-  ctx.fillStyle = '#ffffff'; ctx.font = '600 16px "Montserrat", sans-serif';
-  ctx.fillText('Recursos Humanos', 40, contactY + 110);
-  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '500 16px "Montserrat", sans-serif';
-  ctx.fillText(`Tel: ${INST.rrhhPhone}`, 40, contactY + 138);
-  ctx.fillText(`Email: ${INST.rrhhEmail}`, 40, contactY + 162); ctx.restore();
+  ctx.fillText('FIRMA AUTORIZADA', w / 2, lineaY + 8);
+
+  ctx.save(); ctx.fillStyle = COLORS.primary; ctx.fillRect(0, h - footerH, w, footerH);
+  ctx.fillStyle = COLORS.accent; ctx.fillRect(0, h - footerH, w, 4);
+  ctx.fillStyle = '#ffffff'; ctx.font = '500 14px "Montserrat", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(INST.lostText, w / 2, h - footerH / 2);
+  ctx.restore();
 }
 
 function loadImage(src) {
@@ -317,8 +353,8 @@ function loadImage(src) {
 
 function initScene(frontCanvas, backCanvas, container) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x040611);
-  scene.fog = new THREE.Fog(0x07101e, 12, 36);
+  scene.background = new THREE.Color(0x1a3050);
+  scene.fog = new THREE.Fog(0x1a3050, 14, 38);
   const camera = new THREE.PerspectiveCamera(38, container.clientWidth / container.clientHeight, 0.1, 100);
   camera.position.set(0, -0.3, 11);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -329,7 +365,7 @@ function initScene(frontCanvas, backCanvas, container) {
   renderer.toneMappingExposure = 1.1;
   container.appendChild(renderer.domElement);
   scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-  scene.add(new THREE.HemisphereLight(0xb0c8ff, 0x1a1a3a, 0.75));
+  scene.add(new THREE.HemisphereLight(0xb0c8ff, 0x2a4a6a, 0.75));
   [
     { c: 0xffffff, i: 0.75, p: [6, 8, 9] }, { c: 0x8aa6ff, i: 0.45, p: [-7, -3, 6] },
     { c: 0xffffff, i: 0.75, p: [-6, 8, -9] }, { c: 0xffd58a, i: 0.45, p: [7, -3, -6] },
@@ -337,19 +373,19 @@ function initScene(frontCanvas, backCanvas, container) {
   const pF = new THREE.PointLight(0xffffff, 0.9, 28); pF.position.set(0, -0.3, 12.2); scene.add(pF);
   const pB = new THREE.PointLight(0xffffff, 0.45, 22); pB.position.set(0, 0.5, -7); scene.add(pB);
   const fGeo = new THREE.PlaneGeometry(60, 60);
-  const fMat = new THREE.MeshStandardMaterial({ color: 0x0a1428, roughness: 0.35, metalness: 0.55 });
+  const fMat = new THREE.MeshStandardMaterial({ color: 0x1a3a5a, roughness: 0.35, metalness: 0.55 });
   const fl = new THREE.Mesh(fGeo, fMat); fl.rotation.x = -Math.PI / 2; fl.position.y = -4.5; scene.add(fl);
-  const gr = new THREE.GridHelper(60, 60, 0x3a5fa0, 0x16284a); gr.position.y = -4.49; gr.material.transparent = true; gr.material.opacity = 0.35; scene.add(gr);
+  const gr = new THREE.GridHelper(60, 60, 0x5a8ab5, 0x2a5070); gr.position.y = -4.49; gr.material.transparent = true; gr.material.opacity = 0.35; scene.add(gr);
   const wGeo = new THREE.PlaneGeometry(70, 36);
   const wC = document.createElement('canvas'); wC.width = 1024; wC.height = 512;
-  const wX = wC.getContext('2d'); wX.fillStyle = '#0a1428'; wX.fillRect(0, 0, 1024, 512);
+  const wX = wC.getContext('2d'); wX.fillStyle = '#1a3a5a'; wX.fillRect(0, 0, 1024, 512);
   const g1 = wX.createRadialGradient(512, 256, 0, 512, 256, 520);
-  g1.addColorStop(0, 'rgba(74,123,214,0.55)'); g1.addColorStop(0.25, 'rgba(201,168,90,0.18)'); g1.addColorStop(0.6, 'rgba(40,60,110,0.08)'); g1.addColorStop(1, 'rgba(10,20,40,0)');
+  g1.addColorStop(0, 'rgba(90,159,212,0.55)'); g1.addColorStop(0.25, 'rgba(201,168,90,0.18)'); g1.addColorStop(0.6, 'rgba(60,100,150,0.08)'); g1.addColorStop(1, 'rgba(26,48,80,0)');
   wX.fillStyle = g1; wX.fillRect(0, 0, 1024, 512);
-  const g2 = wX.createRadialGradient(180, 180, 0, 180, 180, 280); g2.addColorStop(0, 'rgba(139,92,246,0.32)'); g2.addColorStop(1, 'rgba(139,92,246,0)'); wX.fillStyle = g2; wX.fillRect(0, 0, 1024, 512);
-  const g3 = wX.createRadialGradient(860, 360, 0, 860, 360, 300); g3.addColorStop(0, 'rgba(16,185,129,0.28)'); g3.addColorStop(1, 'rgba(16,185,129,0)'); wX.fillStyle = g3; wX.fillRect(0, 0, 1024, 512);
+  const g2 = wX.createRadialGradient(180, 180, 0, 180, 180, 280); g2.addColorStop(0, 'rgba(139,92,246,0.25)'); g2.addColorStop(1, 'rgba(139,92,246,0)'); wX.fillStyle = g2; wX.fillRect(0, 0, 1024, 512);
+  const g3 = wX.createRadialGradient(860, 360, 0, 860, 360, 300); g3.addColorStop(0, 'rgba(16,185,129,0.22)'); g3.addColorStop(1, 'rgba(16,185,129,0)'); wX.fillStyle = g3; wX.fillRect(0, 0, 1024, 512);
   const wTex = new THREE.CanvasTexture(wC); wTex.colorSpace = THREE.SRGBColorSpace;
-  const wMat = new THREE.MeshBasicMaterial({ map: wTex, color: 0x0e1830, transparent: true, opacity: 0.92 });
+  const wMat = new THREE.MeshBasicMaterial({ map: wTex, color: 0x2a5a80, transparent: true, opacity: 0.92 });
   const wMesh = new THREE.Mesh(wGeo, wMat); wMesh.position.set(0, 4, -16); scene.add(wMesh);
   [
     { c: 0x4a7bd6, i: 1.4, p: [-5, 3, -9] }, { c: 0xc9a85a, i: 1.2, p: [5, -2, -10] },
@@ -381,7 +417,7 @@ function initScene(frontCanvas, backCanvas, container) {
   }
   function mkCap() {
     const g = new THREE.Group();
-    const cM = mkMat(0x1a2a4a, { roughness: 0.6, opacity: 0.9 }), tM = mkMat(0xc9a85a, { metalness: 0.5, eI: 0.35, opacity: 0.95 });
+    const cM = mkMat(0x3a6fa0, { roughness: 0.6, opacity: 0.9 }), tM = mkMat(0xc9a85a, { metalness: 0.5, eI: 0.35, opacity: 0.95 });
     const b = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.05, 0.55), cM); b.position.y = 0.16; g.add(b); aGeos.push(b.geometry);
     const c = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.2, 20), cM); c.position.y = 0.04; g.add(c); aGeos.push(c.geometry);
     const btn = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), tM); btn.position.y = 0.19; g.add(btn); aGeos.push(btn.geometry);
@@ -424,8 +460,8 @@ function initScene(frontCanvas, backCanvas, container) {
   fTex.anisotropy = bTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   fTex.needsUpdate = bTex.needsUpdate = true;
   bTex.center.set(0.5, 0.5); bTex.repeat.set(-1, 1); bTex.needsUpdate = true;
-  const sMat = new THREE.MeshStandardMaterial({ color: 0x2a4a7a, roughness: 0.5, metalness: 0.1, emissive: 0x2a4a7a, emissiveIntensity: 0.55 });
-  const eMat = new THREE.MeshStandardMaterial({ color: 0x4a6a9a, roughness: 0.4, metalness: 0.2, emissive: 0x4a6a9a, emissiveIntensity: 0.6 });
+  const sMat = new THREE.MeshStandardMaterial({ color: 0x5a9fd4, roughness: 0.5, metalness: 0.1, emissive: 0x5a9fd4, emissiveIntensity: 0.55 });
+  const eMat = new THREE.MeshStandardMaterial({ color: 0x7ab5e0, roughness: 0.4, metalness: 0.2, emissive: 0x7ab5e0, emissiveIntensity: 0.6 });
   const frMat = new THREE.MeshStandardMaterial({ map: fTex, emissive: 0xffffff, emissiveMap: fTex, emissiveIntensity: 0.22, roughness: 0.5, metalness: 0.05 });
   const bkMat = new THREE.MeshStandardMaterial({ map: bTex, emissive: 0xffffff, emissiveMap: bTex, emissiveIntensity: 0.22, roughness: 0.5, metalness: 0.05 });
   const cW = 3.6, cH = 5.7, cD = 0.06;
@@ -443,7 +479,7 @@ function initScene(frontCanvas, backCanvas, container) {
   function pauseA() { autoR = false; if (resTm) { clearTimeout(resTm); resTm = null; } }
   function schedR() { if (resTm) clearTimeout(resTm); resTm = setTimeout(() => { autoR = true; resTm = null; }, 600); }
   function onDn(e) { if (e.button !== 0) return; dragging = true; aPtr = e.pointerId; lX = e.clientX; lY = e.clientY; pauseA(); try { cv.setPointerCapture(e.pointerId); } catch (err) { void err; } }
-  function onMv(e) { if (!dragging || e.pointerId !== aPtr) return; card.rotation.y += (e.clientX - lX) * 0.012; card.rotation.x = Math.max(-0.55, Math.min(0.55, card.rotation.x + (e.clientY - lY) * 0.006)); lX = e.clientX; lY = e.clientY; }
+  function onMv(e) { if (!dragging || e.pointerId !== aPtr) return; card.rotation.y += (e.clientX - lX) * 0.012; lX = e.clientX; lY = e.clientY; }
   function onUp(e) { if (e.pointerId !== aPtr && aPtr !== null) return; dragging = false; aPtr = null; try { cv.releasePointerCapture(e.pointerId); } catch (err) { void err; } schedR(); }
   function onWh(e) { e.preventDefault(); camera.position.z = Math.max(7, Math.min(16, camera.position.z + e.deltaY * 0.012)); }
   cv.addEventListener('pointerdown', onDn); cv.addEventListener('pointermove', onMv);
@@ -460,6 +496,7 @@ function initScene(frontCanvas, backCanvas, container) {
     for (const s of shapes) { const d = s.userData; s.rotateOnAxis(d.rA, d.rS * 0.012); s.position.y = d.bY + Math.sin(t * d.fS + d.fO) * 0.35; }
     pts.rotation.y = t * 0.02;
     if (autoR && !dragging) card.rotation.y += 0.0048;
+    card.rotation.x = 0;
     card.rotation.z = 0;
     renderer.render(scene, camera);
   }
@@ -498,8 +535,9 @@ export default function PhotocheckViewer() {
         if (cancelled) return;
         const t = data.trabajador;
         const logoImg = await loadImage(logoUrl);
-        const photoImg = await loadImage(t.foto);
-        const persona = { dni: t.dni, nombre: t.nombre_completo || `${t.nombres} ${t.apellidos}`, cargo: t.cargo || '', area: t.area || t.empresa || '', photoImg, logoImg };
+        const firmaImg = await loadImage(firmaUrl);
+        const photoImg = await loadImage(proxyImageUrl(t.foto));
+        const persona = { dni: t.dni, nombre: t.nombre_completo || `${t.nombres} ${t.apellidos}`, cargo: t.cargo || '', area: t.area || t.empresa || '', correo: t.correo || '', telefono: t.telefono || '', photoImg, logoImg, firmaImg };
         const fC = document.createElement('canvas'); fC.width = CARD_W; fC.height = CARD_H;
         drawFrontCard(fC.getContext('2d'), persona);
         const bC = document.createElement('canvas'); bC.width = CARD_W; bC.height = CARD_H;
@@ -548,7 +586,6 @@ export default function PhotocheckViewer() {
     <div className="viewer-container">
       <div id="stage" ref={stageRef} />
       <div className="info-bar">
-        <span className="dni-badge">DNI · {dni}</span>
         <span className="hint-rotate">Arrastra para rotar · Se devuelve solo</span>
       </div>
     </div>

@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
-import { FaPlus, FaEdit, FaTrash, FaFileImport } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaFileImport, FaExternalLinkAlt, FaDownload } from 'react-icons/fa';
 import './CrudPage.css';
 
-const initial = { dni: '', nombres: '', apellidos: '', empresa: '', area: '', cargo: '', telefono: '', correo: '', estado: 'ACTIVO' };
+const initial = { dni: '', nombres: '', apellidos: '', empresa: '', area: '', cargo: '', telefono: '', correo: '', estado: 'ACTIVO', url_foto_presencial: '', url_foto_virtual: '', url_qr_image: '', url_qr: '' };
 
 export default function Trabajadores() {
   const [items, setItems] = useState([]);
@@ -80,11 +80,18 @@ export default function Trabajadores() {
     }
   };
 
+  const handleDescargarPlantilla = () => {
+    api.download('/plantilla-trabajadores', 'plantilla_trabajadores.xlsx');
+  };
+
   return (
     <div className="crud-page">
       <div className="page-header">
         <h1>Trabajadores</h1>
         <div className="header-actions">
+          <button className="btn-secondary" onClick={handleDescargarPlantilla}>
+            <FaDownload /> Descargar Plantilla
+          </button>
           <label className="btn-secondary" style={{ cursor: 'pointer' }}>
             <FaFileImport /> Importar Excel
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} hidden />
@@ -125,6 +132,7 @@ export default function Trabajadores() {
               <th>Cargo</th>
               <th>Codigo</th>
               <th>NFS</th>
+              <th>Foto</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -138,6 +146,13 @@ export default function Trabajadores() {
                 <td data-label="Cargo">{t.cargo || '-'}</td>
                 <td data-label="Codigo"><code>{t.codigo_unico || '-'}</code></td>
                 <td data-label="NFS"><code>{t.codigo_nfs || '-'}</code></td>
+                <td data-label="Foto">
+                  {t.url_foto_presencial ? (
+                    <a href={t.url_foto_presencial} target="_blank" rel="noreferrer" title="Foto presencial"><FaExternalLinkAlt /></a>
+                  ) : t.url_foto_virtual ? (
+                    <a href={t.url_foto_virtual} target="_blank" rel="noreferrer" title="Foto virtual"><FaExternalLinkAlt /></a>
+                  ) : '-'}
+                </td>
                 <td data-label="Estado"><span className={`badge badge-${t.estado.toLowerCase()}`}>{t.estado}</span></td>
                 <td data-label="Acciones" className="actions">
                   <button className="btn-icon" onClick={() => openEdit(t)}><FaEdit /></button>
@@ -145,7 +160,7 @@ export default function Trabajadores() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="8" className="empty">No se encontraron registros</td></tr>}
+            {items.length === 0 && <tr><td colSpan="9" className="empty">No se encontraron registros</td></tr>}
           </tbody>
         </table>
       </div>
@@ -170,6 +185,13 @@ export default function Trabajadores() {
                 <label>Telefono<input value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></label>
                 <label>Correo<input type="email" value={form.correo || ''} onChange={(e) => setForm({ ...form, correo: e.target.value })} /></label>
                 <label>Estado<select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}><option>ACTIVO</option><option>INACTIVO</option><option>SUSPENDIDO</option></select></label>
+              </div>
+              <div className="form-section-title">URLs</div>
+              <div className="form-grid">
+                <label>URL Foto Presencial<input value={form.url_foto_presencial || ''} onChange={(e) => setForm({ ...form, url_foto_presencial: e.target.value })} placeholder="https://..." /></label>
+                <label>URL Foto Virtual<input value={form.url_foto_virtual || ''} onChange={(e) => setForm({ ...form, url_foto_virtual: e.target.value })} placeholder="https://..." /></label>
+                <label>URL QR Image<input value={form.url_qr_image || ''} onChange={(e) => setForm({ ...form, url_qr_image: e.target.value })} placeholder="https://..." /></label>
+                <label>URL QR<input value={form.url_qr || ''} onChange={(e) => setForm({ ...form, url_qr: e.target.value })} placeholder="https://..." /></label>
               </div>
               <div className="form-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>

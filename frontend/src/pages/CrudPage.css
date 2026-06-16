@@ -236,6 +236,15 @@ table {
   }
 }
 
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 20px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
 .form-error {
   background: #fef2f2;
   color: #dc2626;
@@ -289,6 +298,44 @@ table {
     font-size: 14px;
     color: var(--accent);
     margin-bottom: 0;
+  }
+
+  .form-actions {
+    justify-content: center;
+  }
+}
+
+.modal-qr {
+  text-align: center;
+  max-width: 420px;
+
+  h2 {
+    text-align: center;
+  }
+
+  .qr-nombre {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .qr-content img {
+    max-width: 250px;
+    max-height: 250px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .qr-error {
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .qr-empty p {
+    color: #a0aec0;
+    font-size: 14px;
+    padding: 24px 0;
   }
 
   .form-actions {

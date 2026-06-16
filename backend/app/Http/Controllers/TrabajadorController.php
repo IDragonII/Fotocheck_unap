@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Trabajador;
 use App\Traits\Loggable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class TrabajadorController extends Controller
 {
@@ -109,9 +113,13 @@ class TrabajadorController extends Controller
             $apellidos = trim($data['APELLIDOS'] ?? '');
             $telefono = trim($data['TELEFONO'] ?? '');
             $correo = trim($data['CORREO'] ?? '');
-            $cargo = trim($data['PUESTO'] ?? '');
+            $cargo = trim($data['CONDICION'] ?? '');
             $codigoUnico = trim($data['CODIGO_UNICO'] ?? '');
             $codigoNfs = trim($data['CODIGO_NFS'] ?? '');
+            $urlFotoPresencial = trim($data['URL_FOTO_PRESENCIAL'] ?? '');
+            $urlFotoVirtual = trim($data['URL_FOTO_VIRTUAL'] ?? '');
+            $urlQrImage = trim($data['URL_QR_IMAGE'] ?? '');
+            $urlQr = trim($data['URL_QR'] ?? '');
 
             if (! $dni || ! $nombres || ! $apellidos) {
                 $errores[] = "Fila {$i}: DNI, NOMBRES y APELLIDOS son obligatorios";
@@ -130,6 +138,10 @@ class TrabajadorController extends Controller
                     'cargo' => $cargo ?: $existe->cargo,
                     'codigo_unico' => $codigoUnico ?: $existe->codigo_unico,
                     'codigo_nfs' => $codigoNfs ?: $existe->codigo_nfs,
+                    'url_foto_presencial' => $urlFotoPresencial ?: $existe->url_foto_presencial,
+                    'url_foto_virtual' => $urlFotoVirtual ?: $existe->url_foto_virtual,
+                    'url_qr_image' => $urlQrImage ?: $existe->url_qr_image,
+                    'url_qr' => $urlQr ?: $existe->url_qr,
                 ]);
                 $actualizados++;
             } else {
@@ -142,6 +154,10 @@ class TrabajadorController extends Controller
                     'cargo' => $cargo ?: null,
                     'codigo_unico' => $codigoUnico ?: null,
                     'codigo_nfs' => $codigoNfs ?: null,
+                    'url_foto_presencial' => $urlFotoPresencial ?: null,
+                    'url_foto_virtual' => $urlFotoVirtual ?: null,
+                    'url_qr_image' => $urlQrImage ?: null,
+                    'url_qr' => $urlQr ?: null,
                     'estado' => 'ACTIVO',
                 ]);
 
@@ -168,6 +184,52 @@ class TrabajadorController extends Controller
             'creados' => $creados,
             'actualizados' => $actualizados,
             'errores' => $errores,
+        ]);
+    }
+
+    public function plantilla()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = [
+            'DNI', 'NOMBRES', 'APELLIDOS', 'TELEFONO', 'CORREO',
+            'CONDICION', 'CODIGO_UNICO', 'CODIGO_NFS',
+            'URL_FOTO_PRESENCIAL', 'URL_FOTO_VIRTUAL', 'URL_QR_IMAGE', 'URL_QR',
+        ];
+
+        $colLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+        foreach ($headers as $i => $header) {
+            $cell = $sheet->getCell($colLetters[$i] . '1');
+            $cell->setValue($header);
+            $cell->getStyle()->getFont()->setBold(true);
+        }
+
+        $sample = [
+            '70123456', 'JUAN', 'PEREZ GARCIA', '951234567', 'juan.perez@unap.edu.pe',
+            'NOMBRADO', 'ABC12345', 'NFS001',
+            'https://drive.google.com/file/d/ABC123/view', 'https://drive.google.com/file/d/XYZ789/view',
+            'https://dominio.com/ABC12345', 'https://dominio.com/qr/ABC12345',
+        ];
+
+        foreach ($sample as $i => $value) {
+            $sheet->getCell($colLetters[$i] . '2')->setValue($value);
+        }
+
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $temp = tempnam(sys_get_temp_dir(), 'plantilla_');
+        $writer->save($temp);
+        $contents = file_get_contents($temp);
+        @unlink($temp);
+
+        return Response::make($contents, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment;filename="plantilla_trabajadores.xlsx"',
         ]);
     }
 }

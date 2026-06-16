@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../services/api';
-import { FaTrash, FaSync } from 'react-icons/fa';
+import { api, proxyImageUrl } from '../services/api';
+import { FaTrash, FaSync, FaEye } from 'react-icons/fa';
 import './CrudPage.css';
 
 export default function Fotochecks() {
@@ -11,6 +11,7 @@ export default function Fotochecks() {
   const [generando, setGenerando] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [qrModal, setQrModal] = useState({ show: false, url: null, nombre: '' });
 
   const load = (p = 1) => {
     api.get(`/fotochecks?page=${p}&buscar=${buscar}`).then((res) => {
@@ -45,6 +46,15 @@ export default function Fotochecks() {
       setShowModal(true);
     } finally {
       setGenerando(false);
+    }
+  };
+
+  const handleVerQr = (f) => {
+    const url = f.trabajador?.url_qr;
+    if (url) {
+      setQrModal({ show: true, url, nombre: `${f.trabajador?.nombres} ${f.trabajador?.apellidos}` });
+    } else {
+      setQrModal({ show: true, url: null, nombre: `${f.trabajador?.nombres} ${f.trabajador?.apellidos}` });
     }
   };
 
@@ -85,6 +95,7 @@ export default function Fotochecks() {
                 <td data-label="Emision">{new Date(f.fecha_emision).toLocaleDateString()}</td>
                 <td data-label="Estado"><span className={`badge badge-${f.estado.toLowerCase()}`}>{f.estado}</span></td>
                 <td data-label="Acciones" className="actions">
+                  <button className="btn-icon" title="Ver QR" onClick={() => handleVerQr(f)}><FaEye /></button>
                   <button className="btn-icon btn-danger" onClick={() => handleDelete(f.id)}><FaTrash /></button>
                 </td>
               </tr>
@@ -113,6 +124,31 @@ export default function Fotochecks() {
             )}
             <div className="form-actions">
               <button className="btn-primary" onClick={() => setShowModal(false)}>Aceptar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {qrModal.show && (
+        <div className="modal-overlay" onClick={() => setQrModal({ show: false, url: null, nombre: '' })}>
+          <div className="modal modal-qr" onClick={(e) => e.stopPropagation()}>
+            <h2>Codigo QR</h2>
+            <p className="qr-nombre">{qrModal.nombre}</p>
+            {qrModal.url ? (
+              <div className="qr-content">
+                <img src={proxyImageUrl(qrModal.url)} alt="QR Code" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                <p className="qr-error" style={{ display: 'none' }}>Error al cargar la imagen del QR</p>
+                <a href={qrModal.url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ marginTop: 12 }}>
+                  Abrir en nueva pestana
+                </a>
+              </div>
+            ) : (
+              <div className="qr-empty">
+                <p>No cuenta con codigo QR</p>
+              </div>
+            )}
+            <div className="form-actions">
+              <button className="btn-primary" onClick={() => setQrModal({ show: false, url: null, nombre: '' })}>Cerrar</button>
             </div>
           </div>
         </div>

@@ -21,4 +21,20 @@ export const api = {
     request(url, { method: 'POST', body: isFormData ? body : JSON.stringify(body) }),
   put: (url, body) => request(url, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (url) => request(url, { method: 'DELETE' }),
+  download: async (url, filename) => {
+    const res = await fetch(`${API_URL}${url}`);
+    if (!res.ok) throw new Error('Error al descargar');
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  },
 };
+
+export function proxyImageUrl(url) {
+  if (!url) return null;
+  const encoded = btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  return `${API_URL}/proxy/image/${encoded}`;
+}

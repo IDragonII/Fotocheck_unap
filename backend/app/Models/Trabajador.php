@@ -13,7 +13,8 @@ class Trabajador extends Model
     protected $fillable = [
         'dni', 'codigo_unico', 'codigo_nfs', 'nombres', 'apellidos', 'empresa', 'area', 'cargo',
         'telefono', 'correo', 'direccion', 'fecha_nacimiento',
-        'fecha_ingreso', 'grupo_sanguineo', 'foto', 'estado', 'observaciones',
+        'fecha_ingreso', 'grupo_sanguineo', 'foto', 'url_foto_presencial', 'url_foto_virtual',
+        'url_qr_image', 'url_qr', 'estado', 'observaciones',
     ];
 
     protected $hidden = [];

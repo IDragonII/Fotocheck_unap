@@ -4,6 +4,7 @@ use App\Http\Controllers\AccesoQrController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FotocheckController;
+use App\Http\Controllers\ImageProxyController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\PermisoController;
 use App\Http\Controllers\PublicFotocheckController;
@@ -16,6 +17,9 @@ Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
 
 Route::get('/public/fotocheck/{codigo}', [PublicFotocheckController::class, 'show'])
+    ->middleware('throttle:30,1');
+
+Route::get('/proxy/image/{url}', [ImageProxyController::class, 'show'])
     ->middleware('throttle:30,1');
 
 Route::middleware('throttle:60,1')->group(function () {
@@ -39,4 +43,6 @@ Route::middleware('throttle:60,1')->group(function () {
 
     Route::get('/accesos-qr', [AccesoQrController::class, 'index']);
     Route::post('/accesos-qr/{trabajadorId}', [AccesoQrController::class, 'registrar']);
+
+    Route::get('/plantilla-trabajadores', [TrabajadorController::class, 'plantilla']);
 });
