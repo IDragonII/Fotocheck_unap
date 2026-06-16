@@ -11,6 +11,8 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        DB::statement("SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION'");
+
         $totalTrabajadores = Trabajador::count();
         $trabajadoresActivos = Trabajador::where('estado', 'ACTIVO')->count();
         $totalFotochecks = Fotocheck::count();
@@ -18,44 +20,61 @@ class DashboardController extends Controller
         $totalUsuarios = Usuario::count();
         $totalAccesos = DB::table('accesos_qr')->count();
 
-        $accesosPorDia = DB::table('accesos_qr')
-            ->select(DB::raw('DATE(fecha_acceso) as fecha'), DB::raw('count(*) as total'))
-            ->where('fecha_acceso', '>=', now()->subDays(30))
-            ->groupBy(DB::raw('DATE(fecha_acceso)'))
-            ->orderBy('fecha')
+        $personalPorTipo = DB::table('trabajadores')
+            ->select(DB::raw("CASE WHEN LOWER(cargo) LIKE '%docente%' THEN 'Docentes' ELSE 'Administrativos' END as tipo"), DB::raw('count(*) as total'))
+            ->groupByRaw("CASE WHEN LOWER(cargo) LIKE '%docente%' THEN 'Docentes' ELSE 'Administrativos' END")
             ->get();
 
-        $accesosPorHora = DB::table('accesos_qr')
-            ->select(DB::raw('HOUR(fecha_acceso) as hora'), DB::raw('count(*) as total'))
-            ->where('fecha_acceso', '>=', now()->subDays(30))
-            ->groupBy(DB::raw('HOUR(fecha_acceso)'))
-            ->orderBy('hora')
+        $fotosPorTipo = DB::table('trabajadores')
+            ->select(
+                DB::raw("SUM(CASE WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' THEN 1 ELSE 0 END) as presencial"),
+                DB::raw("SUM(CASE WHEN url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 1 ELSE 0 END) as digital"),
+                DB::raw("SUM(CASE WHEN (url_foto_presencial IS NULL OR url_foto_presencial = '') AND (url_foto_virtual IS NULL OR url_foto_virtual = '') THEN 1 ELSE 0 END) as sin_foto")
+            )
+            ->first();
+
+        $disponibilidadFoto = DB::table('trabajadores')
+            ->select(DB::raw("
+                CASE
+                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' AND url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Ambas'
+                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' THEN 'Solo Presencial'
+                    WHEN url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Solo Digital'
+                    ELSE 'Sin Fotografia'
+                END as tipo
+            "), DB::raw('count(*) as total'))
+            ->groupByRaw("
+                CASE
+                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' AND url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Ambas'
+                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' THEN 'Solo Presencial'
+                    WHEN url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Solo Digital'
+                    ELSE 'Sin Fotografia'
+                END
+            ")
             ->get();
 
-        $topTrabajadores = DB::table('accesos_qr')
-            ->join('trabajadores', 'trabajadores.id', '=', 'accesos_qr.trabajador_id')
-            ->select('trabajadores.nombres', 'trabajadores.apellidos', DB::raw('count(*) as total'))
-            ->where('accesos_qr.fecha_acceso', '>=', now()->subDays(30))
-            ->groupBy('trabajadores.id', 'trabajadores.nombres', 'trabajadores.apellidos')
+        $distribucionCargo = DB::table('trabajadores')
+            ->select(DB::raw("CASE WHEN cargo IS NULL OR cargo = '' THEN 'Sin especificar' ELSE cargo END as cargo"), DB::raw('count(*) as total'))
+            ->groupByRaw("CASE WHEN cargo IS NULL OR cargo = '' THEN 'Sin especificar' ELSE cargo END")
             ->orderByDesc('total')
-            ->limit(5)
             ->get();
 
-        $logsPorAccion = DB::table('logs')
-            ->select('accion', DB::raw('count(*) as total'))
-            ->where('fecha', '>=', now()->subDays(30))
-            ->groupBy('accion')
-            ->orderByDesc('total')
-            ->get();
-
-        $trabajadoresPorEstado = DB::table('trabajadores')
-            ->select('estado', DB::raw('count(*) as total'))
-            ->groupBy('estado')
-            ->get();
-
-        $fotochecksPorEstado = DB::table('fotochecks')
-            ->select('estado', DB::raw('count(*) as total'))
-            ->groupBy('estado')
+        $integridadContacto = DB::table('trabajadores')
+            ->select(DB::raw("
+                CASE
+                    WHEN correo IS NOT NULL AND correo != '' AND telefono IS NOT NULL AND telefono != '' THEN 'Completo'
+                    WHEN correo IS NOT NULL AND correo != '' THEN 'Solo Correo'
+                    WHEN telefono IS NOT NULL AND telefono != '' THEN 'Solo Telefono'
+                    ELSE 'Sin Contacto'
+                END as estado
+            "), DB::raw('count(*) as total'))
+            ->groupByRaw("
+                CASE
+                    WHEN correo IS NOT NULL AND correo != '' AND telefono IS NOT NULL AND telefono != '' THEN 'Completo'
+                    WHEN correo IS NOT NULL AND correo != '' THEN 'Solo Correo'
+                    WHEN telefono IS NOT NULL AND telefono != '' THEN 'Solo Telefono'
+                    ELSE 'Sin Contacto'
+                END
+            ")
             ->get();
 
         return response()->json([
@@ -65,12 +84,11 @@ class DashboardController extends Controller
             'fotochecksVigentes' => $fotochecksVigentes,
             'totalUsuarios' => $totalUsuarios,
             'totalAccesos' => $totalAccesos,
-            'accesosPorDia' => $accesosPorDia,
-            'accesosPorHora' => $accesosPorHora,
-            'topTrabajadores' => $topTrabajadores,
-            'logsPorAccion' => $logsPorAccion,
-            'trabajadoresPorEstado' => $trabajadoresPorEstado,
-            'fotochecksPorEstado' => $fotochecksPorEstado,
+            'personalPorTipo' => $personalPorTipo,
+            'fotosPorTipo' => $fotosPorTipo,
+            'disponibilidadFoto' => $disponibilidadFoto,
+            'distribucionCargo' => $distribucionCargo,
+            'integridadContacto' => $integridadContacto,
         ]);
     }
 }

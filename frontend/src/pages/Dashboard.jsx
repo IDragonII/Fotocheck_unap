@@ -2,22 +2,26 @@ import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { FaUsers, FaIdCard, FaUserShield, FaQrcode } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import './Dashboard.css';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler, ChartDataLabels);
 
 const COLORS = {
-  primary: '#1e40af',
-  primaryLight: '#3b82f6',
+  primary: '#3a6fa0',
   accent: '#c9a85a',
-  accentLight: '#f5e6c8',
   green: '#10b981',
   red: '#ef4444',
   yellow: '#f59e0b',
   purple: '#8b5cf6',
   gray: '#6b7280',
+  blue: '#3b82f6',
+  teal: '#14b8a6',
+  orange: '#f97316',
 };
+
+const n = (v) => Number(v) || 0;
 
 const chartDefaults = {
   responsive: true,
@@ -26,7 +30,7 @@ const chartDefaults = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1a2a4a',
+      backgroundColor: '#1a3a5a',
       titleColor: '#ffffff',
       bodyColor: '#cfe0ff',
       borderColor: 'rgba(201,168,90,0.3)',
@@ -34,7 +38,53 @@ const chartDefaults = {
       padding: 12,
       cornerRadius: 8,
     },
+    datalabels: {
+      color: '#ffffff',
+      font: { weight: 'bold', size: 13 },
+      formatter: (value) => {
+        const ds = value.chart?.data?.datasets?.[0]?.data;
+        if (!ds) return '';
+        const total = ds.reduce((a, b) => a + n(b), 0);
+        if (total === 0) return '';
+        const pct = ((n(value) / total) * 100).toFixed(1);
+        return pct >= 5 ? `${pct}%` : '';
+      },
+      display: (ctx) => {
+        const ds = ctx.chart?.data?.datasets?.[0]?.data;
+        if (!ds) return false;
+        const total = ds.reduce((a, b) => a + n(b), 0);
+        return total > 0 && (n(ds[ctx.dataIndex]) / total) >= 0.05;
+      },
+    },
   },
+};
+
+const legendOpts = {
+  display: true,
+  position: 'bottom',
+  labels: {
+    padding: 16,
+    usePointStyle: true,
+    pointStyle: 'circle',
+    generateLabels: (chart) => {
+      const data = chart.data;
+      if (!data.labels || !data.datasets.length) return [];
+      const total = data.datasets[0].data.reduce((a, b) => a + n(b), 0);
+      return data.labels.map((label, i) => {
+        const value = n(data.datasets[0].data[i]);
+        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+        return { text: `${label} (${value} - ${pct}%)`, fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: data.datasets[0].backgroundColor[i], lineWidth: 0, pointStyle: 'circle', index: i };
+      });
+    },
+  },
+};
+
+const barDatalabels = {
+  color: '#1a3a5a',
+  anchor: 'end',
+  align: 'end',
+  font: { weight: 'bold', size: 12 },
+  formatter: (value) => n(value),
 };
 
 export default function Dashboard() {
@@ -53,72 +103,29 @@ export default function Dashboard() {
     { label: 'Accesos QR', value: stats.totalAccesos, sub: 'Ultimos 30 dias', icon: <FaQrcode />, color: COLORS.accent },
   ];
 
-  const accesosDiaData = {
-    labels: stats.accesosPorDia.map((d) => {
-      const f = new Date(d.fecha);
-      return `${f.getDate()}/${f.getMonth() + 1}`;
-    }),
-    datasets: [{
-      label: 'Accesos',
-      data: stats.accesosPorDia.map((d) => d.total),
-      borderColor: COLORS.primary,
-      backgroundColor: 'rgba(30,64,175,0.1)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 3,
-      pointHoverRadius: 6,
-      pointBackgroundColor: COLORS.primary,
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-    }],
+  const personalTipoData = {
+    labels: stats.personalPorTipo.map((d) => d.tipo),
+    datasets: [{ data: stats.personalPorTipo.map((d) => n(d.total)), backgroundColor: [COLORS.primary, COLORS.accent], borderWidth: 0, hoverOffset: 8 }],
   };
 
-  const accesosHoraData = {
-    labels: stats.accesosPorHora.map((d) => `${d.hora}:00`),
-    datasets: [{
-      label: 'Accesos',
-      data: stats.accesosPorHora.map((d) => d.total),
-      backgroundColor: stats.accesosPorHora.map((d) =>
-        d.hora >= 8 && d.hora <= 17 ? COLORS.primary : 'rgba(30,64,175,0.3)'
-      ),
-      borderRadius: 6,
-      borderSkipped: false,
-    }],
+  const fotosTipoData = {
+    labels: ['Presencial', 'Digital', 'Sin Foto'],
+    datasets: [{ data: [n(stats.fotosPorTipo.presencial), n(stats.fotosPorTipo.digital), n(stats.fotosPorTipo.sin_foto)], backgroundColor: [COLORS.green, COLORS.blue, COLORS.gray], borderWidth: 0, hoverOffset: 8 }],
   };
 
-  const topTrabData = {
-    labels: stats.topTrabajadores.map((t) => `${t.nombres.split(' ')[0]} ${t.apellidos.split(' ')[0]}`),
-    datasets: [{
-      label: 'Escaneos',
-      data: stats.topTrabajadores.map((t) => t.total),
-      backgroundColor: [COLORS.primary, COLORS.accent, COLORS.green, COLORS.purple, COLORS.yellow],
-      borderWidth: 0,
-      borderRadius: 6,
-    }],
+  const disponibilidadData = {
+    labels: stats.disponibilidadFoto.map((d) => d.tipo),
+    datasets: [{ data: stats.disponibilidadFoto.map((d) => n(d.total)), backgroundColor: [COLORS.green, COLORS.primary, COLORS.teal, COLORS.gray], borderWidth: 0, hoverOffset: 8 }],
   };
 
-  const trabEstadoData = {
-    labels: stats.trabajadoresPorEstado.map((e) => e.estado),
-    datasets: [{
-      data: stats.trabajadoresPorEstado.map((e) => e.total),
-      backgroundColor: stats.trabajadoresPorEstado.map((e) => {
-        if (e.estado === 'ACTIVO') return COLORS.green;
-        if (e.estado === 'INACTIVO') return COLORS.red;
-        return COLORS.yellow;
-      }),
-      borderWidth: 0,
-      hoverOffset: 8,
-    }],
+  const cargoData = {
+    labels: stats.distribucionCargo.map((d) => d.cargo),
+    datasets: [{ label: 'Cantidad', data: stats.distribucionCargo.map((d) => n(d.total)), backgroundColor: [COLORS.primary, COLORS.accent, COLORS.green, COLORS.purple, COLORS.teal, COLORS.orange, COLORS.red, COLORS.yellow, COLORS.blue, COLORS.gray], borderRadius: 6, borderSkipped: false }],
   };
 
-  const logsAccionData = {
-    labels: stats.logsPorAccion.map((l) => l.accion || 'Sin accion'),
-    datasets: [{
-      data: stats.logsPorAccion.map((l) => l.total),
-      backgroundColor: [COLORS.primary, COLORS.accent, COLORS.green, COLORS.purple, COLORS.yellow, COLORS.red, COLORS.gray],
-      borderWidth: 0,
-      hoverOffset: 8,
-    }],
+  const integridadData = {
+    labels: stats.integridadContacto.map((d) => d.estado),
+    datasets: [{ data: stats.integridadContacto.map((d) => n(d.total)), backgroundColor: stats.integridadContacto.map((d) => { if (d.estado === 'Completo') return COLORS.green; if (d.estado === 'Sin Contacto') return COLORS.red; return COLORS.yellow; }), borderWidth: 0, hoverOffset: 8 }],
   };
 
   return (
@@ -139,64 +146,43 @@ export default function Dashboard() {
       </div>
 
       <div className="charts-grid">
+        <div className="chart-card">
+          <h3>Personal: Administrativos vs Docentes</h3>
+          <div className="chart-box chart-box-doughnut">
+            <Doughnut data={personalTipoData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: legendOpts }, cutout: '55%' }} />
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>Fotos: Presencial vs Digital</h3>
+          <div className="chart-box chart-box-doughnut">
+            <Doughnut data={fotosTipoData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: legendOpts }, cutout: '55%' }} />
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>Disponibilidad de Fotografia</h3>
+          <div className="chart-box chart-box-doughnut">
+            <Doughnut data={disponibilidadData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: legendOpts }, cutout: '55%' }} />
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>Integridad de Contacto</h3>
+          <div className="chart-box chart-box-doughnut">
+            <Doughnut data={integridadData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: legendOpts }, cutout: '55%' }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="charts-grid">
         <div className="chart-card chart-wide">
-          <h3>Accesos QR por dia</h3>
+          <h3>Distribucion por Condicion Laboral</h3>
           <div className="chart-box">
-            <Line data={accesosDiaData} options={{ ...chartDefaults, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }} />
-          </div>
-        </div>
-
-        <div className="chart-card">
-          <h3>Accesos por hora</h3>
-          <div className="chart-box">
-            <Bar data={accesosHoraData} options={{ ...chartDefaults, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }} />
-          </div>
-        </div>
-
-        <div className="chart-card">
-          <h3>Top trabajadores</h3>
-          <div className="chart-box">
-            <Bar data={topTrabData} options={{ ...chartDefaults, indexAxis: 'y', scales: { y: { grid: { display: false } }, x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }} />
-          </div>
-        </div>
-
-        <div className="chart-card">
-          <h3>Trabajadores por estado</h3>
-          <div className="chart-box chart-box-doughnut">
-            <Doughnut data={trabEstadoData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } } }, cutout: '60%' }} />
-          </div>
-        </div>
-
-        <div className="chart-card">
-          <h3>Logs por accion</h3>
-          <div className="chart-box chart-box-doughnut">
-            <Doughnut data={logsAccionData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } } }, cutout: '60%' }} />
-          </div>
-        </div>
-
-        <div className="chart-card">
-          <h3>Fotochecks por estado</h3>
-          <div className="chart-box chart-box-doughnut">
-            <Doughnut data={fotochecksPorEstado(stats.fotochecksPorEstado)} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } } }, cutout: '60%' }} />
+            <Bar data={cargoData} options={{ ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false }, datalabels: barDatalabels }, scales: { x: { grid: { display: false }, ticks: { maxRotation: 45 } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }} />
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-function fotochecksPorEstado(data) {
-  return {
-    labels: data.map((e) => e.estado),
-    datasets: [{
-      data: data.map((e) => e.total),
-      backgroundColor: data.map((e) => {
-        if (e.estado === 'VIGENTE') return COLORS.green;
-        if (e.estado === 'VENCIDO') return COLORS.yellow;
-        return COLORS.red;
-      }),
-      borderWidth: 0,
-      hoverOffset: 8,
-    }],
-  };
 }

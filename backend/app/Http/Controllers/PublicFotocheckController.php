@@ -52,9 +52,9 @@ class PublicFotocheckController extends Controller
                 'telefono' => $trabajador->telefono,
                 'correo' => $trabajador->correo,
                 'foto' => $trabajador->url_foto_presencial ?: $trabajador->url_foto_virtual,
-                'firma' => $trabajador->url_foto_presencial ?: $trabajador->url_foto_virtual,
                 'codigo' => $trabajador->codigo_unico,
                 'codigo_nfs' => $trabajador->codigo_nfs,
+                'fecha_ingreso' => $trabajador->fecha_ingreso,
             ],
             'fotocheck' => [
                 'codigo' => $fotocheck->codigo,
