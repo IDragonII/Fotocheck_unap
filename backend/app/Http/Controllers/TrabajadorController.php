@@ -93,73 +93,87 @@ class TrabajadorController extends Controller
         $file = $request->file('archivo');
         $spreadsheet = IOFactory::load($file->getRealPath());
         $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray();
+        $highestCol = $sheet->getHighestColumn();
+        $highestRow = $sheet->getHighestRow();
 
-        if (count($rows) < 2) {
+        if ($highestRow < 2) {
             return response()->json(['message' => 'El archivo no tiene datos'], 422);
         }
 
-        $header = array_map('strtoupper', array_map('trim', $rows[0]));
+        $header = [];
+        for ($col = 'A'; $col <= $highestCol; $col++) {
+            $header[] = strtoupper(trim((string) $sheet->getCell($col.'1')->getValue()));
+        }
+
         $creados = 0;
         $actualizados = 0;
-        $errores = [];
+        $saltados = 0;
 
-        for ($i = 1; $i < count($rows); $i++) {
-            $row = $rows[$i];
-            $data = array_combine($header, $row);
+        for ($i = 2; $i <= $highestRow; $i++) {
+            $data = [];
+            $colIndex = 0;
+            for ($col = 'A'; $col <= $highestCol; $col++) {
+                $cell = $sheet->getCell($col.$i);
+                $data[$header[$colIndex]] = trim((string) $cell->getValue());
+                $colIndex++;
+            }
 
-            $dni = trim($data['DNI'] ?? '');
-            $nombres = trim($data['NOMBRES'] ?? '');
-            $apellidos = trim($data['APELLIDOS'] ?? '');
-            $telefono = trim($data['TELEFONO'] ?? '');
-            $correo = trim($data['CORREO'] ?? '');
-            $cargo = trim($data['CONDICION'] ?? '');
-            $codigoUnico = trim($data['CODIGO_UNICO'] ?? '');
-            $codigoNfs = trim($data['CODIGO_NFS'] ?? '');
-            $urlFotoPresencial = trim($data['URL_FOTO_PRESENCIAL'] ?? '');
-            $urlFotoVirtual = trim($data['URL_FOTO_VIRTUAL'] ?? '');
-            $urlQrImage = trim($data['URL_QR_IMAGE'] ?? '');
-            $urlQr = trim($data['URL_QR'] ?? '');
+            $dni = trim((string) ($data['DNI'] ?? ''));
+            $nombres = trim((string) ($data['NOMBRES'] ?? ''));
+            $apellidos = trim((string) ($data['APELLIDOS'] ?? ''));
+            $codigoUnico = trim((string) ($data['CODIGO_UNICO'] ?? ''));
 
-            if (! $dni || ! $nombres || ! $apellidos) {
-                $errores[] = "Fila {$i}: DNI, NOMBRES y APELLIDOS son obligatorios";
-
+            if ($dni === '' || $nombres === '' || $apellidos === '' || $codigoUnico === '') {
+                $saltados++;
                 continue;
             }
+
+            $telefono = trim((string) ($data['TELEFONO'] ?? ''));
+            $correo = trim((string) ($data['CORREO'] ?? ''));
+            $cargo = trim((string) ($data['CONDICION'] ?? ''));
+            $codigoNfs = trim((string) ($data['CODIGO_NFS'] ?? ''));
+            $urlFotoPresencial = trim((string) ($data['URL_FOTO_PRESENCIAL'] ?? ''));
+            $urlFotoVirtual = trim((string) ($data['URL_FOTO_VIRTUAL'] ?? ''));
+            $urlQrImage = trim((string) ($data['URL_QR_IMAGE'] ?? ''));
+            $urlQr = trim((string) ($data['URL_QR'] ?? ''));
 
             $existe = Trabajador::where('dni', $dni)->first();
 
             if ($existe) {
-                $existe->update([
+                $campos = [
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
-                    'telefono' => $telefono ?: $existe->telefono,
-                    'correo' => $correo ?: $existe->correo,
-                    'cargo' => $cargo ?: $existe->cargo,
-                    'codigo_unico' => $codigoUnico ?: $existe->codigo_unico,
-                    'codigo_nfs' => $codigoNfs ?: $existe->codigo_nfs,
-                    'url_foto_presencial' => $urlFotoPresencial ?: $existe->url_foto_presencial,
-                    'url_foto_virtual' => $urlFotoVirtual ?: $existe->url_foto_virtual,
-                    'url_qr_image' => $urlQrImage ?: $existe->url_qr_image,
-                    'url_qr' => $urlQr ?: $existe->url_qr,
-                ]);
+                ];
+                if ($telefono !== '') $campos['telefono'] = $telefono;
+                if ($correo !== '') $campos['correo'] = $correo;
+                if ($cargo !== '') $campos['cargo'] = $cargo;
+                if ($codigoUnico !== '') $campos['codigo_unico'] = $codigoUnico;
+                if ($codigoNfs !== '') $campos['codigo_nfs'] = $codigoNfs;
+                if ($urlFotoPresencial !== '') $campos['url_foto_presencial'] = $urlFotoPresencial;
+                if ($urlFotoVirtual !== '') $campos['url_foto_virtual'] = $urlFotoVirtual;
+                if ($urlQrImage !== '') $campos['url_qr_image'] = $urlQrImage;
+                if ($urlQr !== '') $campos['url_qr'] = $urlQr;
+
+                $existe->update($campos);
                 $actualizados++;
             } else {
-                $nuevo = Trabajador::create([
+                $camposCreate = [
                     'dni' => $dni,
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
-                    'telefono' => $telefono ?: null,
-                    'correo' => $correo ?: null,
-                    'cargo' => $cargo ?: null,
-                    'codigo_unico' => $codigoUnico ?: null,
-                    'codigo_nfs' => $codigoNfs ?: null,
-                    'url_foto_presencial' => $urlFotoPresencial ?: null,
-                    'url_foto_virtual' => $urlFotoVirtual ?: null,
-                    'url_qr_image' => $urlQrImage ?: null,
-                    'url_qr' => $urlQr ?: null,
                     'estado' => 'ACTIVO',
-                ]);
+                ];
+                if ($telefono !== '') $camposCreate['telefono'] = $telefono;
+                if ($correo !== '') $camposCreate['correo'] = $correo;
+                if ($cargo !== '') $camposCreate['cargo'] = $cargo;
+                if ($codigoUnico !== '') $camposCreate['codigo_unico'] = $codigoUnico;
+                if ($codigoNfs !== '') $camposCreate['codigo_nfs'] = $codigoNfs;
+                if ($urlFotoPresencial !== '') $camposCreate['url_foto_presencial'] = $urlFotoPresencial;
+                if ($urlFotoVirtual !== '') $camposCreate['url_foto_virtual'] = $urlFotoVirtual;
+                if ($urlQrImage !== '') $camposCreate['url_qr_image'] = $urlQrImage;
+                if ($urlQr !== '') $camposCreate['url_qr'] = $urlQr;
+
+                $nuevo = Trabajador::create($camposCreate);
 
                 if ($nuevo->codigo_unico) {
                     $codigo = 'FC-'.strtoupper(Str::random(8));
@@ -177,13 +191,13 @@ class TrabajadorController extends Controller
             }
         }
 
-        $this->log($request, 'Importacion', 'trabajadores', null, "Importados: {$creados}, Actualizados: {$actualizados}, Errores: ".count($errores));
+        $this->log($request, 'Importacion', 'trabajadores', null, "Importados: {$creados}, Actualizados: {$actualizados}, Saltados: {$saltados}");
 
         return response()->json([
             'message' => 'Importacion completada',
             'creados' => $creados,
             'actualizados' => $actualizados,
-            'errores' => $errores,
+            'saltados' => $saltados,
         ]);
     }
 

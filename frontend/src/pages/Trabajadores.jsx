@@ -106,7 +106,7 @@ export default function Trabajadores() {
         <div className={`import-result ${importResult.errores?.length ? 'with-errors' : ''}`}>
           <p>{importResult.message}</p>
           {importResult.creados !== undefined && (
-            <p>Creados: {importResult.creados} | Actualizados: {importResult.actualizados}</p>
+            <p>Creados: {importResult.creados} | Actualizados: {importResult.actualizados} | No importados: {importResult.saltados || 0}</p>
           )}
           {importResult.errores?.length > 0 && (
             <ul>
