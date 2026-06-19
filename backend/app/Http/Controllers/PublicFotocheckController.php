@@ -52,6 +52,7 @@ class PublicFotocheckController extends Controller
                 'telefono' => $trabajador->telefono,
                 'correo' => $trabajador->correo,
                 'foto' => $trabajador->url_foto_presencial ?: $trabajador->url_foto_virtual,
+                'url_qr' => $trabajador->url_qr,
                 'codigo' => $trabajador->codigo_unico,
                 'codigo_nfs' => $trabajador->codigo_nfs,
                 'fecha_ingreso' => $trabajador->fecha_ingreso,
@@ -60,6 +61,7 @@ class PublicFotocheckController extends Controller
                 'codigo' => $fotocheck->codigo,
                 'estado' => $fotocheck->estado,
                 'fecha_emision' => $fotocheck->fecha_emision,
+                'url_qr' => $fotocheck->url_qr,
             ],
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');
