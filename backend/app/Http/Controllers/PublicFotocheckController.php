@@ -43,11 +43,13 @@ class PublicFotocheckController extends Controller
         return response()->json([
             'trabajador' => [
                 'dni' => $trabajador->dni,
+                'codigo_universitario' => $trabajador->codigo_universitario,
                 'nombres' => $trabajador->nombres,
                 'apellidos' => $trabajador->apellidos,
                 'nombre_completo' => $trabajador->nombres.' '.$trabajador->apellidos,
                 'cargo' => $trabajador->cargo,
                 'area' => $trabajador->area,
+                'dependencia' => $trabajador->dependencia,
                 'empresa' => $trabajador->empresa,
                 'telefono' => $trabajador->telefono,
                 'correo' => $trabajador->correo,
@@ -56,6 +58,12 @@ class PublicFotocheckController extends Controller
                 'codigo' => $trabajador->codigo_unico,
                 'codigo_nfs' => $trabajador->codigo_nfs,
                 'fecha_ingreso' => $trabajador->fecha_ingreso,
+                'regimen' => $trabajador->regimen,
+                'facultad' => $trabajador->facultad,
+                'escuela_profesional' => $trabajador->escuela_profesional,
+                'resolucion_rectoral' => $trabajador->resolucion_rectoral,
+                'vigencia' => $trabajador->vigencia,
+                'fecha_emision' => $trabajador->fecha_emision,
             ],
             'fotocheck' => [
                 'codigo' => $fotocheck->codigo,

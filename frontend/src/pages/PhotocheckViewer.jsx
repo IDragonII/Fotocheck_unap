@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { FaSyncAlt } from 'react-icons/fa';
 import logoUrl from '../assets/logo.png';
 import firmaUrl from '../assets/firma.png';
 import marcaAguaUrl from '../assets/marca_agua.png';
 import { proxyImageUrl } from '../services/api';
+import JsBarcode from 'jsbarcode';
 import './PhotocheckViewer.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -28,6 +29,35 @@ export default function PhotocheckViewer() {
   const [fotoUrl, setFotoUrl] = useState(null);
   const [qrUrl, setQrUrl] = useState(null);
   const [firmaImg, setFirmaImg] = useState(null);
+  const barcodeCanvasRef = useRef(null);
+
+  const generateBarcode = (dni) => {
+    if (barcodeCanvasRef.current && dni) {
+      try {
+        const container = barcodeCanvasRef.current;
+        container.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 40;
+        container.appendChild(canvas);
+        JsBarcode(canvas, dni, {
+          format: 'CODE128',
+          displayValue: false,
+          height: 32,
+          width: 1.5,
+          margin: 0,
+        });
+      } catch (e) {
+        console.error('Error generating barcode:', e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (data?.trabajador?.dni) {
+      requestAnimationFrame(() => generateBarcode(data.trabajador.dni));
+    }
+  }, [data]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,14 +116,11 @@ export default function PhotocheckViewer() {
           <img src={marcaAguaUrl} alt="" className="pcv-watermark" />
           <div className="pcv-blue-strip" />
 
+          <div className="pcv-barcode-top" ref={barcodeCanvasRef} />
+
           <div className="pcv-front-header">
             <img src={logoUrl} alt="UNA" className="pcv-logo" />
             <div className="pcv-header-right">
-              <div className="pcv-barcode-placeholder">
-                {Array.from({ length: 22 }).map((_, i) => (
-                  <span key={i} className={i % 3 === 0 ? 'pcv-bar-thick' : 'pcv-bar-thin'} />
-                ))}
-              </div>
               <div className="pcv-university">
                 <span>UNIVERSIDAD</span>
                 <span>NACIONAL DEL</span>
@@ -133,7 +160,7 @@ export default function PhotocheckViewer() {
           </div>
 
           <div className="pcv-front-bottom-bar">
-            <span className="pcv-code">{t.codigo_nfs || '0000000'}</span>
+            <span className="pcv-code">{t.codigo_universitario || '0000000'}</span>
           </div>
         </div>
 
@@ -147,19 +174,25 @@ export default function PhotocheckViewer() {
             <div className="pcv-back-content">
               <section className="pcv-section">
                 <h4>Contacto</h4>
-                <div className="pcv-info-row"><span>Email</span><span>{t.correo || '---'}</span></div>
-                <div className="pcv-info-row"><span>Teléfono</span><span>+51 {phone || '---'}</span></div>
+                <div className="pcv-info-row"><span>Email</span><span>{t.correo || '-'}</span></div>
+                <div className="pcv-info-row"><span>Teléfono</span><span>{phone || '-'}</span></div>
               </section>
               <section className="pcv-section">
                 <h4>Información Laboral</h4>
                 <div className="pcv-info-row"><span>Régimen</span><span>{t.regimen || 'Ley Nro. 30057 - Nombrado'}</span></div>
-                <div className="pcv-info-row"><span>Facultad</span><span>{t.facultad || '---'}</span></div>
-                <div className="pcv-info-row"><span>E.P.</span><span>{t.escuela_profesional || '---'}</span></div>
-                <div className="pcv-info-row"><span>Cargo</span><span>{t.cargo || '---'}</span></div>
-                <div className="pcv-info-row"><span>F. Ingreso</span><span>{t.fecha_ingreso || '---'}</span></div>
-                <div className="pcv-info-row"><span>R.R.</span><span>{f?.resolucion_rectoral || '---'}</span></div>
-                <div className="pcv-info-row"><span>Vigencia</span><span>{f?.vigencia || '---'}</span></div>
-                <div className="pcv-info-row"><span>F. Emisión</span><span>{f?.fecha_emision || new Date().toLocaleDateString()}</span></div>
+                {t.cargo && t.cargo.toLowerCase().includes('docente') ? (
+                  <>
+                    <div className="pcv-info-row"><span>Facultad</span><span>{t.facultad || '-'}</span></div>
+                    <div className="pcv-info-row"><span>E.P.</span><span>{t.escuela_profesional || '-'}</span></div>
+                  </>
+                ) : (
+                  <div className="pcv-info-row"><span>Dependencia</span><span>{t.dependencia || '-'}</span></div>
+                )}
+                <div className="pcv-info-row"><span>Cargo</span><span>{t.cargo || '-'}</span></div>
+                <div className="pcv-info-row"><span>F. Ingreso</span><span>{t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '-'}</span></div>
+                <div className="pcv-info-row"><span>R.R.</span><span>{t.resolucion_rectoral || '-'}</span></div>
+                <div className="pcv-info-row"><span>Vigencia</span><span>{t.vigencia || '-'}</span></div>
+                <div className="pcv-info-row"><span>F. Emisión</span><span>{t.fecha_emision ? new Date(t.fecha_emision).toLocaleDateString() : '-'}</span></div>
               </section>
               <div className="pcv-firma-section">
                 {firmaImg && (

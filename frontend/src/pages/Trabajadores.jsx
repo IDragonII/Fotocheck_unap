@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { FaPlus, FaEdit, FaTrash, FaFileImport, FaExternalLinkAlt, FaDownload } from 'react-icons/fa';
 import './CrudPage.css';
 
-const initial = { dni: '', nombres: '', apellidos: '', empresa: '', area: '', cargo: '', telefono: '', correo: '', estado: 'ACTIVO', url_foto_presencial: '', url_foto_virtual: '', url_qr_image: '', url_qr: '' };
+const initial = { dni: '', codigo_universitario: '', nombres: '', apellidos: '', empresa: '', area: '', dependencia: '', cargo: '', telefono: '', correo: '', estado: 'ACTIVO', fecha_ingreso: '', regimen: '', facultad: '', escuela_profesional: '', resolucion_rectoral: '', vigencia: '', fecha_emision: '', url_foto_presencial: '', url_foto_virtual: '', url_qr_image: '', url_qr: '' };
 
 export default function Trabajadores() {
   const [items, setItems] = useState([]);
@@ -179,11 +179,22 @@ export default function Trabajadores() {
             <form onSubmit={handleSave}>
               <div className="form-grid">
                 <label>DNI<input value={form.dni} onChange={(e) => setForm({ ...form, dni: e.target.value })} required /></label>
+                <label>Código Universitario<input value={form.codigo_universitario || ''} onChange={(e) => setForm({ ...form, codigo_universitario: e.target.value })} /></label>
                 <label>Nombres<input value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} required /></label>
                 <label>Apellidos<input value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} required /></label>
+                <label>Empresa<input value={form.empresa || ''} onChange={(e) => setForm({ ...form, empresa: e.target.value })} /></label>
+                <label>Área<input value={form.area || ''} onChange={(e) => setForm({ ...form, area: e.target.value })} /></label>
+                <label>Dependencia<input value={form.dependencia || ''} onChange={(e) => setForm({ ...form, dependencia: e.target.value })} /></label>
                 <label>Cargo<input value={form.cargo || ''} onChange={(e) => setForm({ ...form, cargo: e.target.value })} /></label>
-                <label>Telefono<input value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></label>
+                <label>Teléfono<input value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></label>
                 <label>Correo<input type="email" value={form.correo || ''} onChange={(e) => setForm({ ...form, correo: e.target.value })} /></label>
+                <label>Fecha Ingreso<input type="date" value={form.fecha_ingreso || ''} onChange={(e) => setForm({ ...form, fecha_ingreso: e.target.value })} /></label>
+                <label>Régimen<input value={form.regimen || ''} onChange={(e) => setForm({ ...form, regimen: e.target.value })} /></label>
+                <label>Facultad<input value={form.facultad || ''} onChange={(e) => setForm({ ...form, facultad: e.target.value })} /></label>
+                <label>Escuela Profesional<input value={form.escuela_profesional || ''} onChange={(e) => setForm({ ...form, escuela_profesional: e.target.value })} /></label>
+                <label>Resolución Rectoral<input value={form.resolucion_rectoral || ''} onChange={(e) => setForm({ ...form, resolucion_rectoral: e.target.value })} /></label>
+                <label>Vigencia<input value={form.vigencia || ''} onChange={(e) => setForm({ ...form, vigencia: e.target.value })} /></label>
+                <label>Fecha Emisión<input type="date" value={form.fecha_emision || ''} onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })} /></label>
                 <label>Estado<select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}><option>ACTIVO</option><option>INACTIVO</option><option>SUSPENDIDO</option></select></label>
               </div>
               <div className="form-section-title">URLs</div>
