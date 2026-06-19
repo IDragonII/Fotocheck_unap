@@ -128,8 +128,19 @@ class TrabajadorController extends Controller
                 continue;
             }
 
+            $codigoUniversitario = trim((string) ($data['CODIGO_UNIVERSITARIO'] ?? ''));
+            $empresa = trim((string) ($data['EMPRESA'] ?? ''));
+            $area = trim((string) ($data['AREA'] ?? ''));
+            $dependencia = trim((string) ($data['DEPENDENCIA'] ?? ''));
             $telefono = trim((string) ($data['TELEFONO'] ?? ''));
             $correo = trim((string) ($data['CORREO'] ?? ''));
+            $fechaIngreso = trim((string) ($data['FECHA_INGRESO'] ?? ''));
+            $regimen = trim((string) ($data['REGIMEN'] ?? ''));
+            $facultad = trim((string) ($data['FACULTAD'] ?? ''));
+            $escuelaProfesional = trim((string) ($data['ESCUELA_PROFESIONAL'] ?? ''));
+            $resolucionRectoral = trim((string) ($data['RESOLUCION_RECTORAL'] ?? ''));
+            $vigencia = trim((string) ($data['VIGENCIA'] ?? ''));
+            $fechaEmision = trim((string) ($data['FECHA_EMISION'] ?? ''));
             $cargo = trim((string) ($data['CONDICION'] ?? ''));
             $codigoNfs = trim((string) ($data['CODIGO_NFS'] ?? ''));
             $urlFotoPresencial = trim((string) ($data['URL_FOTO_PRESENCIAL'] ?? ''));
@@ -144,8 +155,19 @@ class TrabajadorController extends Controller
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
                 ];
+                if ($codigoUniversitario !== '') $campos['codigo_universitario'] = $codigoUniversitario;
+                if ($empresa !== '') $campos['empresa'] = $empresa;
+                if ($area !== '') $campos['area'] = $area;
+                if ($dependencia !== '') $campos['dependencia'] = $dependencia;
                 if ($telefono !== '') $campos['telefono'] = $telefono;
                 if ($correo !== '') $campos['correo'] = $correo;
+                if ($fechaIngreso !== '') $campos['fecha_ingreso'] = $fechaIngreso;
+                if ($regimen !== '') $campos['regimen'] = $regimen;
+                if ($facultad !== '') $campos['facultad'] = $facultad;
+                if ($escuelaProfesional !== '') $campos['escuela_profesional'] = $escuelaProfesional;
+                if ($resolucionRectoral !== '') $campos['resolucion_rectoral'] = $resolucionRectoral;
+                if ($vigencia !== '') $campos['vigencia'] = $vigencia;
+                if ($fechaEmision !== '') $campos['fecha_emision'] = $fechaEmision;
                 if ($cargo !== '') $campos['cargo'] = $cargo;
                 if ($codigoUnico !== '') $campos['codigo_unico'] = $codigoUnico;
                 if ($codigoNfs !== '') $campos['codigo_nfs'] = $codigoNfs;
@@ -163,8 +185,19 @@ class TrabajadorController extends Controller
                     'apellidos' => $apellidos,
                     'estado' => 'ACTIVO',
                 ];
+                if ($codigoUniversitario !== '') $camposCreate['codigo_universitario'] = $codigoUniversitario;
+                if ($empresa !== '') $camposCreate['empresa'] = $empresa;
+                if ($area !== '') $camposCreate['area'] = $area;
+                if ($dependencia !== '') $camposCreate['dependencia'] = $dependencia;
                 if ($telefono !== '') $camposCreate['telefono'] = $telefono;
                 if ($correo !== '') $camposCreate['correo'] = $correo;
+                if ($fechaIngreso !== '') $camposCreate['fecha_ingreso'] = $fechaIngreso;
+                if ($regimen !== '') $camposCreate['regimen'] = $regimen;
+                if ($facultad !== '') $camposCreate['facultad'] = $facultad;
+                if ($escuelaProfesional !== '') $camposCreate['escuela_profesional'] = $escuelaProfesional;
+                if ($resolucionRectoral !== '') $camposCreate['resolucion_rectoral'] = $resolucionRectoral;
+                if ($vigencia !== '') $camposCreate['vigencia'] = $vigencia;
+                if ($fechaEmision !== '') $camposCreate['fecha_emision'] = $fechaEmision;
                 if ($cargo !== '') $camposCreate['cargo'] = $cargo;
                 if ($codigoUnico !== '') $camposCreate['codigo_unico'] = $codigoUnico;
                 if ($codigoNfs !== '') $camposCreate['codigo_nfs'] = $codigoNfs;
@@ -207,12 +240,14 @@ class TrabajadorController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = [
-            'DNI', 'NOMBRES', 'APELLIDOS', 'TELEFONO', 'CORREO',
+            'DNI', 'CODIGO_UNIVERSITARIO', 'NOMBRES', 'APELLIDOS', 'EMPRESA', 'AREA', 'DEPENDENCIA', 'CARGO',
+            'TELEFONO', 'CORREO', 'FECHA_INGRESO', 'REGIMEN', 'FACULTAD', 'ESCUELA_PROFESIONAL',
+            'RESOLUCION_RECTORAL', 'VIGENCIA', 'FECHA_EMISION',
             'CONDICION', 'CODIGO_UNICO', 'CODIGO_NFS',
             'URL_FOTO_PRESENCIAL', 'URL_FOTO_VIRTUAL', 'URL_QR_IMAGE', 'URL_QR',
         ];
 
-        $colLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+        $colLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X'];
 
         foreach ($headers as $i => $header) {
             $cell = $sheet->getCell($colLetters[$i] . '1');
@@ -221,7 +256,9 @@ class TrabajadorController extends Controller
         }
 
         $sample = [
-            '70123456', 'JUAN', 'PEREZ GARCIA', '951234567', 'juan.perez@unap.edu.pe',
+            '70123456', 'UNI001', 'JUAN', 'PEREZ GARCIA', 'UNA', 'FACULTAD DE INGENIERIA', 'DEP. SISTEMAS', 'DOCENTE',
+            '951234567', 'juan.perez@unap.edu.pe', '2020-01-15', 'NOMBRADO', 'FACULTAD DE INGENIERIA', 'INGENIERIA DE SISTEMAS',
+            'RR-001-2020', '2025-12-31', '2020-01-15',
             'NOMBRADO', 'ABC12345', 'NFS001',
             'https://drive.google.com/file/d/ABC123/view', 'https://drive.google.com/file/d/XYZ789/view',
             'https://dominio.com/ABC12345', 'https://dominio.com/qr/ABC12345',
@@ -231,7 +268,7 @@ class TrabajadorController extends Controller
             $sheet->getCell($colLetters[$i] . '2')->setValue($value);
         }
 
-        foreach (range('A', 'L') as $col) {
+        foreach (range('A', 'X') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

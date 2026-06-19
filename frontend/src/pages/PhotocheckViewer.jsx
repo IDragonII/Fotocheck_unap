@@ -200,7 +200,6 @@ export default function PhotocheckViewer() {
                     <img src={firmaUrl} alt="Firma" className="pcv-firma-img" />
                   </div>
                 )}
-                <div className="pcv-firma-line" />
                 <span className="pcv-firma-nombre">{f?.firmante_nombre || 'Dr. Paulino Machaca Ari'}</span>
                 <span className="pcv-firma-cargo">{f?.firmante_cargo || 'RECTOR'}</span>
               </div>
