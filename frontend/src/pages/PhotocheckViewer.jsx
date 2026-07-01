@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { FaSyncAlt, FaUserPlus } from 'react-icons/fa';
+import { FaSyncAlt, FaWhatsapp } from 'react-icons/fa';
 import logoUrl from '../assets/logo.png';
 import firmaUrl from '../assets/firma.png';
 import marcaAguaUrl from '../assets/marca_agua.png';
@@ -20,27 +20,11 @@ function loadImage(src) {
   });
 }
 
-const generateVCard = (nombre, telefono) => {
-  const safeNombre = nombre.replace(/[,\n]/g, ' ');
-  const safePhone = telefono.replace(/[^\d+]/g, '');
-  return `BEGIN:VCARD
-VERSION:3.0
-FN:${safeNombre}
-TEL;TYPE=CELL:${safePhone}
-END:VCARD`;
-};
-
-const downloadVCard = (nombre, telefono) => {
-  const vCard = generateVCard(nombre, telefono);
-  const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `contacto_${nombre.replace(/\s+/g, '_')}.vcf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+const openWhatsApp = (telefono) => {
+  const clean = telefono.replace(/^51/, '').replace(/\D/g, '');
+  const numero = `51${clean}`;
+  const url = `https://wa.me/${numero}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 export default function PhotocheckViewer() {
@@ -235,12 +219,12 @@ export default function PhotocheckViewer() {
           className="pcv-save-contact"
           onClick={() => {
             const phone = (t.telefono || '').replace(/^51/, '');
-            downloadVCard(nombre, phone);
+            openWhatsApp(phone);
           }}
-          title="Guardar contacto"
-          aria-label="Guardar contacto"
+          title="Abrir WhatsApp"
+          aria-label="Abrir WhatsApp"
         >
-          <FaUserPlus />
+          <FaWhatsapp />
         </button>
         <button className="pcv-toggle" onClick={() => setFlipped(!flipped)}>
           <FaSyncAlt /> {flipped ? 'Ver Anverso' : 'Ver Reverso'}
