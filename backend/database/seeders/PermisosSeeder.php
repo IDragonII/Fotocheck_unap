@@ -50,6 +50,12 @@ class PermisosSeeder extends Seeder
             // Configuracion
             ['nombre' => 'configuracion_ver',      'descripcion' => 'Ver configuracion',            'es_critico' => 0],
             ['nombre' => 'configuracion_editar',   'descripcion' => 'Editar configuracion',         'es_critico' => 1],
+
+            // Solicitudes
+            ['nombre' => 'solicitudes_ver',        'descripcion' => 'Ver solicitudes/tickets',      'es_critico' => 0],
+            ['nombre' => 'solicitudes_crear',      'descripcion' => 'Crear solicitudes/tickets',    'es_critico' => 0],
+            ['nombre' => 'solicitudes_editar',     'descripcion' => 'Editar solicitudes/tickets',   'es_critico' => 0],
+            ['nombre' => 'solicitudes_eliminar',   'descripcion' => 'Eliminar solicitudes/tickets', 'es_critico' => 0],
         ]);
     }
 }

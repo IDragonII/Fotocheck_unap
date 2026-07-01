@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        'solicitudes' => [
+            'driver' => env('SOLICITUD_DISK_DRIVER', 'local'),
+            'root' => storage_path('app/solicitudes'),
+            'url' => env('APP_URL').'/storage/solicitudes',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

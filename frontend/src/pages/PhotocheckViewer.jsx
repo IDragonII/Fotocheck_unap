@@ -27,7 +27,7 @@ export default function PhotocheckViewer() {
   const [error, setError] = useState('');
   const [data, setData] = useState(null);
   const [fotoUrl, setFotoUrl] = useState(null);
-  const [qrUrl, setQrUrl] = useState(null);
+  const [qrUrl, setQrUrl] = useState(null); // eslint-disable-line no-unused-vars
   const [firmaImg, setFirmaImg] = useState(null);
   const barcodeCanvasRef = useRef(null);
 
@@ -68,14 +68,14 @@ export default function PhotocheckViewer() {
         const json = await res.json();
         if (cancelled) return;
         setData(json);
-        const [foto, qr, firma] = await Promise.all([
-          loadImage(json.trabajador.foto ? proxyImageUrl(json.trabajador.foto) : null),
-          loadImage(json.trabajador.url_qr ? proxyImageUrl(json.trabajador.url_qr) : null),
+        const fotoSrc = json.trabajador.url_foto_presencial || json.trabajador.url_foto_virtual;
+        const [foto, firma] = await Promise.all([
+          loadImage(fotoSrc ? proxyImageUrl(fotoSrc) : null),
           loadImage(firmaUrl),
         ]);
         if (!cancelled) {
           setFotoUrl(foto);
-          setQrUrl(qr);
+          setQrUrl(json.fotocheck.url_qr || null);
           setFirmaImg(firma);
           setLoading(false);
         }
@@ -131,17 +131,13 @@ export default function PhotocheckViewer() {
           </div>
 
           <div className="pcv-front-body">
+           {/*
             <div className="pcv-qr-placeholder">
               {qrUrl ? (
-                <img src={qrUrl.src || qrUrl} alt="QR Code" className="pcv-qr-image" />
-              ) : (
-                <div className="pcv-qr-grid">
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <span key={i} className={[0,1,2,3,4,5,9,10,14,15,19,20,21,22,23,24].includes(i) ? 'pcv-qr-on' : ''} />
-                  ))}
-                </div>
-              )}
+                <img src={proxyImageUrl(qrUrl)} alt="QR Code" className="pcv-qr-image" onError={(e) => { e.target.style.display = 'none'; }} />
+              ) : null}
             </div>
+            */}
 
             <div className="pcv-photo-frame">
               {fotoUrl ? (

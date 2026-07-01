@@ -14,7 +14,9 @@ class DashboardController extends Controller
         DB::statement("SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION'");
 
         $totalTrabajadores = Trabajador::count();
-        $trabajadoresActivos = Trabajador::where('estado', 'ACTIVO')->count();
+        $trabajadoresActivos = Trabajador::whereHas('persona', function ($q) {
+            $q->where('estado', 'ACTIVO');
+        })->count();
         $totalFotochecks = Fotocheck::count();
         $fotochecksVigentes = Fotocheck::where('estado', 'VIGENTE')->count();
         $totalUsuarios = Usuario::count();
@@ -26,27 +28,25 @@ class DashboardController extends Controller
             ->get();
 
         $fotosPorTipo = DB::table('trabajadores')
+            ->join('personas', 'trabajadores.persona_id', '=', 'personas.id')
             ->select(
-                DB::raw("SUM(CASE WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' THEN 1 ELSE 0 END) as presencial"),
-                DB::raw("SUM(CASE WHEN url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 1 ELSE 0 END) as digital"),
-                DB::raw("SUM(CASE WHEN (url_foto_presencial IS NULL OR url_foto_presencial = '') AND (url_foto_virtual IS NULL OR url_foto_virtual = '') THEN 1 ELSE 0 END) as sin_foto")
+                DB::raw("SUM(CASE WHEN personas.url_foto_presencial IS NOT NULL AND personas.url_foto_presencial != '' THEN 1 ELSE 0 END) as presencial"),
+                DB::raw("SUM(CASE WHEN personas.url_foto_virtual IS NOT NULL AND personas.url_foto_virtual != '' THEN 1 ELSE 0 END) as digital"),
+                DB::raw("SUM(CASE WHEN (personas.url_foto_presencial IS NULL OR personas.url_foto_presencial = '') AND (personas.url_foto_virtual IS NULL OR personas.url_foto_virtual = '') THEN 1 ELSE 0 END) as sin_foto")
             )
             ->first();
 
         $disponibilidadFoto = DB::table('trabajadores')
+            ->join('personas', 'trabajadores.persona_id', '=', 'personas.id')
             ->select(DB::raw("
                 CASE
-                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' AND url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Ambas'
-                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' THEN 'Solo Presencial'
-                    WHEN url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Solo Digital'
+                    WHEN personas.url_foto_presencial IS NOT NULL AND personas.url_foto_presencial != '' THEN 'Con Fotografia'
                     ELSE 'Sin Fotografia'
                 END as tipo
             "), DB::raw('count(*) as total'))
             ->groupByRaw("
                 CASE
-                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' AND url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Ambas'
-                    WHEN url_foto_presencial IS NOT NULL AND url_foto_presencial != '' THEN 'Solo Presencial'
-                    WHEN url_foto_virtual IS NOT NULL AND url_foto_virtual != '' THEN 'Solo Digital'
+                    WHEN personas.url_foto_presencial IS NOT NULL AND personas.url_foto_presencial != '' THEN 'Con Fotografia'
                     ELSE 'Sin Fotografia'
                 END
             ")
@@ -59,19 +59,24 @@ class DashboardController extends Controller
             ->get();
 
         $integridadContacto = DB::table('trabajadores')
+            ->join('personas', 'trabajadores.persona_id', '=', 'personas.id')
+            ->leftJoin('correos_persona', function ($join) {
+                $join->on('correos_persona.persona_id', '=', 'personas.id')
+                    ->where('correos_persona.principal', '=', 1);
+            })
             ->select(DB::raw("
                 CASE
-                    WHEN correo IS NOT NULL AND correo != '' AND telefono IS NOT NULL AND telefono != '' THEN 'Completo'
-                    WHEN correo IS NOT NULL AND correo != '' THEN 'Solo Correo'
-                    WHEN telefono IS NOT NULL AND telefono != '' THEN 'Solo Telefono'
+                    WHEN correos_persona.correo IS NOT NULL AND correos_persona.correo != '' AND personas.telefono IS NOT NULL AND personas.telefono != '' THEN 'Completo'
+                    WHEN correos_persona.correo IS NOT NULL AND correos_persona.correo != '' THEN 'Solo Correo'
+                    WHEN personas.telefono IS NOT NULL AND personas.telefono != '' THEN 'Solo Telefono'
                     ELSE 'Sin Contacto'
                 END as estado
             "), DB::raw('count(*) as total'))
             ->groupByRaw("
                 CASE
-                    WHEN correo IS NOT NULL AND correo != '' AND telefono IS NOT NULL AND telefono != '' THEN 'Completo'
-                    WHEN correo IS NOT NULL AND correo != '' THEN 'Solo Correo'
-                    WHEN telefono IS NOT NULL AND telefono != '' THEN 'Solo Telefono'
+                    WHEN correos_persona.correo IS NOT NULL AND correos_persona.correo != '' AND personas.telefono IS NOT NULL AND personas.telefono != '' THEN 'Completo'
+                    WHEN correos_persona.correo IS NOT NULL AND correos_persona.correo != '' THEN 'Solo Correo'
+                    WHEN personas.telefono IS NOT NULL AND personas.telefono != '' THEN 'Solo Telefono'
                     ELSE 'Sin Contacto'
                 END
             ")

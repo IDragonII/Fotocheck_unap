@@ -49,8 +49,8 @@ export default function AccesosQr() {
             {items.map((a) => (
               <tr key={a.id}>
                 <td data-label="Fecha">{new Date(a.fecha_acceso).toLocaleString()}</td>
-                <td data-label="Trabajador">{a.trabajador?.nombres} {a.trabajador?.apellidos}</td>
-                <td data-label="DNI">{a.trabajador?.dni}</td>
+                <td data-label="Trabajador">{a.trabajador?.persona?.nombres} {a.trabajador?.persona?.apellidos}</td>
+                <td data-label="DNI">{a.trabajador?.persona?.dni}</td>
                 <td data-label="IP">{a.ip || '-'}</td>
                 <td data-label="Navegador" className="log-detalle">{a.navegador || '-'}</td>
               </tr>

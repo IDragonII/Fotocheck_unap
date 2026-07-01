@@ -9,11 +9,11 @@ class AccesoQrController extends Controller
 {
     public function index(Request $request)
     {
-        $query = AccesoQr::with('trabajador');
+        $query = AccesoQr::with('trabajador.persona');
 
         if ($request->filled('buscar')) {
             $buscar = $request->buscar;
-            $query->whereHas('trabajador', function ($q) use ($buscar) {
+            $query->whereHas('trabajador.persona', function ($q) use ($buscar) {
                 $q->where('nombres', 'like', "%{$buscar}%")
                     ->orWhere('apellidos', 'like', "%{$buscar}%")
                     ->orWhere('dni', 'like', "%{$buscar}%");

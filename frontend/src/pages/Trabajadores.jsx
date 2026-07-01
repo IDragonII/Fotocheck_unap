@@ -1,11 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
-import { FaPlus, FaEdit, FaTrash, FaFileImport, FaExternalLinkAlt, FaDownload } from 'react-icons/fa';
+import { hasPermission } from '../services/authService';
+import { useToast } from '../components/Toast';
+import { FaPlus, FaEdit, FaTrash, FaFileImport, FaDownload, FaImage, FaTimes } from 'react-icons/fa';
 import './CrudPage.css';
 
-const initial = { dni: '', codigo_universitario: '', nombres: '', apellidos: '', empresa: '', area: '', dependencia: '', cargo: '', telefono: '', correo: '', estado: 'ACTIVO', fecha_ingreso: '', regimen: '', facultad: '', escuela_profesional: '', resolucion_rectoral: '', vigencia: '', fecha_emision: '', url_foto_presencial: '', url_foto_virtual: '', url_qr_image: '', url_qr: '' };
+const initial = { dni: '', codigo_universitario: '', nombres: '', apellidos: '', empresa: '', area: '', dependencia: '', cargo: '', telefono: '', correos: [], estado: 'ACTIVO', fecha_ingreso: '', regimen: '', facultad: '', escuela_profesional: '', resolucion_rectoral: '', vigencia: '', fecha_emision: '', url_foto_presencial: '', url_foto_virtual: '', url_qr_image: '', url_qr: '' };
 
 export default function Trabajadores() {
+  const { toast, confirm } = useToast();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -16,11 +19,22 @@ export default function Trabajadores() {
   const [error, setError] = useState('');
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [nuevoCorreo, setNuevoCorreo] = useState('');
   const fileRef = useRef(null);
+
+  const canCreate = hasPermission('trabajadores_crear');
+  const canEdit = hasPermission('trabajadores_editar');
+  const canDelete = hasPermission('trabajadores_eliminar');
+
+  const flatten = (t) => ({
+    ...t,
+    ...t.persona,
+    correos: t.persona?.correos || [],
+  });
 
   const load = (p = 1) => {
     api.get(`/trabajadores?page=${p}&buscar=${buscar}`).then((res) => {
-      setItems(res.data);
+      setItems(res.data.map(flatten));
       setPage(res.current_page);
       setLastPage(res.last_page);
     });
@@ -33,8 +47,24 @@ export default function Trabajadores() {
     load();
   };
 
-  const openNew = () => { setForm(initial); setEditing(null); setShowModal(true); setError(''); };
-  const openEdit = (item) => { setForm(item); setEditing(item.id); setShowModal(true); setError(''); };
+  const openNew = () => {
+    setForm({ ...initial, correos: [] });
+    setEditing(null);
+    setShowModal(true);
+    setError('');
+    setNuevoCorreo('');
+  };
+
+  const openEdit = (item) => {
+    setForm({
+      ...item,
+      correos: item.correos?.map((c) => ({ correo: c.correo, tipo: c.tipo || 'INSTITUCIONAL', principal: c.principal })) || [],
+    });
+    setEditing(item.id);
+    setShowModal(true);
+    setError('');
+    setNuevoCorreo('');
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -53,9 +83,14 @@ export default function Trabajadores() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Eliminar este trabajador?')) return;
-    await api.delete(`/trabajadores/${id}`);
-    load(page);
+    if (!await confirm('Eliminar este trabajador?')) return;
+    try {
+      await api.delete(`/trabajadores/${id}`);
+      toast.success('Trabajador eliminado');
+      load(page);
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const handleImport = async (e) => {
@@ -84,6 +119,36 @@ export default function Trabajadores() {
     api.download('/plantilla-trabajadores', 'plantilla_trabajadores.xlsx');
   };
 
+  const addCorreo = () => {
+    const correo = nuevoCorreo.trim();
+    if (!correo) return;
+    if (form.correos.some((c) => c.correo === correo)) {
+      setError('Este correo ya esta en la lista');
+      return;
+    }
+    setForm({
+      ...form,
+      correos: [...form.correos, { correo, tipo: 'INSTITUCIONAL', principal: form.correos.length === 0 }],
+    });
+    setNuevoCorreo('');
+    setError('');
+  };
+
+  const removeCorreo = (index) => {
+    const newCorreos = form.correos.filter((_, i) => i !== index);
+    if (newCorreos.length > 0 && !newCorreos.some((c) => c.principal)) {
+      newCorreos[0].principal = true;
+    }
+    setForm({ ...form, correos: newCorreos });
+  };
+
+  const handleCorreoKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCorreo();
+    }
+  };
+
   return (
     <div className="crud-page">
       <div className="page-header">
@@ -92,11 +157,15 @@ export default function Trabajadores() {
           <button className="btn-secondary" onClick={handleDescargarPlantilla}>
             <FaDownload /> Descargar Plantilla
           </button>
-          <label className="btn-secondary" style={{ cursor: 'pointer' }}>
-            <FaFileImport /> Importar Excel
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} hidden />
-          </label>
-          <button className="btn-primary" onClick={openNew}><FaPlus /> Nuevo</button>
+          {canCreate && (
+            <>
+              <label className="btn-secondary" style={{ cursor: 'pointer' }}>
+                <FaFileImport /> Importar Excel
+                <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} hidden />
+              </label>
+              <button className="btn-primary" onClick={openNew}><FaPlus /> Nuevo</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -129,12 +198,13 @@ export default function Trabajadores() {
               <th>DNI</th>
               <th>Nombres</th>
               <th>Apellidos</th>
+              <th>Correos</th>
               <th>Cargo</th>
               <th>Codigo</th>
               <th>NFS</th>
               <th>Foto</th>
               <th>Estado</th>
-              <th>Acciones</th>
+              {(canEdit || canDelete) && <th>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -143,24 +213,37 @@ export default function Trabajadores() {
                 <td data-label="DNI">{t.dni}</td>
                 <td data-label="Nombres">{t.nombres}</td>
                 <td data-label="Apellidos">{t.apellidos}</td>
+                <td data-label="Correos">
+                  {t.correos.length > 0 ? (
+                    <div className="correos-list">
+                      {t.correos.map((c, i) => (
+                        <span key={i} className={`correo-badge ${c.principal ? 'correo-principal' : ''}`}>
+                          {c.correo}
+                        </span>
+                      ))}
+                    </div>
+                  ) : '-'}
+                </td>
                 <td data-label="Cargo">{t.cargo || '-'}</td>
                 <td data-label="Codigo"><code>{t.codigo_unico || '-'}</code></td>
                 <td data-label="NFS"><code>{t.codigo_nfs || '-'}</code></td>
                 <td data-label="Foto">
-                  {t.url_foto_presencial ? (
-                    <a href={t.url_foto_presencial} target="_blank" rel="noreferrer" title="Foto presencial"><FaExternalLinkAlt /></a>
-                  ) : t.url_foto_virtual ? (
-                    <a href={t.url_foto_virtual} target="_blank" rel="noreferrer" title="Foto virtual"><FaExternalLinkAlt /></a>
-                  ) : '-'}
+                  {(t.url_foto_presencial || t.url_foto_virtual) ? (
+                    <a href={t.url_foto_presencial || t.url_foto_virtual} target="_blank" rel="noopener noreferrer" className="foto-icon" title="Abrir foto">
+                      <FaImage />
+                    </a>
+                  ) : <span className="foto-icon no-photo"><FaImage /></span>}
                 </td>
                 <td data-label="Estado"><span className={`badge badge-${t.estado.toLowerCase()}`}>{t.estado}</span></td>
-                <td data-label="Acciones" className="actions">
-                  <button className="btn-icon" onClick={() => openEdit(t)}><FaEdit /></button>
-                  <button className="btn-icon btn-danger" onClick={() => handleDelete(t.id)}><FaTrash /></button>
-                </td>
+                {(canEdit || canDelete) && (
+                  <td data-label="Acciones" className="actions">
+                    {canEdit && <button className="btn-icon" onClick={() => openEdit(t)}><FaEdit /></button>}
+                    {canDelete && <button className="btn-icon btn-danger" onClick={() => handleDelete(t.id)}><FaTrash /></button>}
+                  </td>
+                )}
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="9" className="empty">No se encontraron registros</td></tr>}
+            {items.length === 0 && <tr><td colSpan="10" className="empty">No se encontraron registros</td></tr>}
           </tbody>
         </table>
       </div>
@@ -187,7 +270,6 @@ export default function Trabajadores() {
                 <label>Dependencia<input value={form.dependencia || ''} onChange={(e) => setForm({ ...form, dependencia: e.target.value })} /></label>
                 <label>Cargo<input value={form.cargo || ''} onChange={(e) => setForm({ ...form, cargo: e.target.value })} /></label>
                 <label>Teléfono<input value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></label>
-                <label>Correo<input type="email" value={form.correo || ''} onChange={(e) => setForm({ ...form, correo: e.target.value })} /></label>
                 <label>Fecha Ingreso<input type="date" value={form.fecha_ingreso || ''} onChange={(e) => setForm({ ...form, fecha_ingreso: e.target.value })} /></label>
                 <label>Régimen<input value={form.regimen || ''} onChange={(e) => setForm({ ...form, regimen: e.target.value })} /></label>
                 <label>Facultad<input value={form.facultad || ''} onChange={(e) => setForm({ ...form, facultad: e.target.value })} /></label>
@@ -197,6 +279,38 @@ export default function Trabajadores() {
                 <label>Fecha Emisión<input type="date" value={form.fecha_emision || ''} onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })} /></label>
                 <label>Estado<select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}><option>ACTIVO</option><option>INACTIVO</option><option>SUSPENDIDO</option></select></label>
               </div>
+
+              <div className="form-section-title">Correos</div>
+              <div className="correos-input-section">
+                <div className="correo-add-row">
+                  <input
+                    type="email"
+                    value={nuevoCorreo}
+                    onChange={(e) => setNuevoCorreo(e.target.value)}
+                    onKeyDown={handleCorreoKeyDown}
+                    placeholder="Agregar correo electronico..."
+                  />
+                  <button type="button" className="btn-secondary btn-sm" onClick={addCorreo}>
+                    <FaPlus /> Agregar
+                  </button>
+                </div>
+                {form.correos.length > 0 && (
+                  <div className="correos-edit-list">
+                    {form.correos.map((c, i) => (
+                      <div key={i} className="correo-edit-item">
+                        <span className={`correo-badge ${c.principal ? 'correo-principal' : ''}`}>
+                          {c.correo}
+                          {c.principal && <small> (Principal)</small>}
+                        </span>
+                        <button type="button" className="btn-icon btn-danger btn-sm" onClick={() => removeCorreo(i)}>
+                          <FaTimes />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="form-section-title">URLs</div>
               <div className="form-grid">
                 <label>URL Foto Presencial<input value={form.url_foto_presencial || ''} onChange={(e) => setForm({ ...form, url_foto_presencial: e.target.value })} placeholder="https://..." /></label>

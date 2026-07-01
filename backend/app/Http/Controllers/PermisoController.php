@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 
 class PermisoController extends Controller
 {
+    private function isSuperAdmin(Request $request): bool
+    {
+        return $request->user()->roles()->where('nombre', 'SUPER_ADMIN')->exists();
+    }
+
     public function index()
     {
         $permisos = Permiso::orderBy('nombre')->get();
@@ -16,6 +21,15 @@ class PermisoController extends Controller
 
     public function store(Request $request)
     {
+        if (! $this->isSuperAdmin($request)) {
+            $esCritico = $request->input('es_critico', false);
+            if ($esCritico) {
+                return response()->json([
+                    'message' => 'Solo SUPER_ADMIN puede crear permisos críticos',
+                ], 403);
+            }
+        }
+
         $request->validate([
             'nombre' => 'required|string|max:100|unique:permisos,nombre',
         ]);
@@ -36,6 +50,12 @@ class PermisoController extends Controller
     {
         $permiso = Permiso::findOrFail($id);
 
+        if (! $this->isSuperAdmin($request) && $permiso->es_critico) {
+            return response()->json([
+                'message' => 'Solo SUPER_ADMIN puede modificar permisos críticos',
+            ], 403);
+        }
+
         $request->validate([
             'nombre' => 'required|string|max:100|unique:permisos,nombre,'.$id,
         ]);
@@ -47,7 +67,15 @@ class PermisoController extends Controller
 
     public function destroy($id)
     {
-        Permiso::findOrFail($id)->delete();
+        $permiso = Permiso::findOrFail($id);
+
+        if (! $this->isSuperAdmin(request()) && $permiso->es_critico) {
+            return response()->json([
+                'message' => 'Solo SUPER_ADMIN puede eliminar permisos críticos',
+            ], 403);
+        }
+
+        $permiso->delete();
 
         return response()->json(['message' => 'Permiso eliminado']);
     }

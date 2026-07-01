@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api, proxyImageUrl } from '../services/api';
+import { useToast } from '../components/Toast';
 import { FaTrash, FaSync, FaEye } from 'react-icons/fa';
 import './CrudPage.css';
 
 export default function Fotochecks() {
+  const { toast, confirm } = useToast();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -29,9 +31,14 @@ export default function Fotochecks() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Anular este fotocheck?')) return;
-    await api.delete(`/fotochecks/${id}`);
-    load(page);
+    if (!await confirm('Anular este fotocheck?')) return;
+    try {
+      await api.delete(`/fotochecks/${id}`);
+      toast.success('Fotocheck anulado');
+      load(page);
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const handleGenerar = async () => {
@@ -50,11 +57,11 @@ export default function Fotochecks() {
   };
 
   const handleVerQr = (f) => {
-    const url = f.trabajador?.url_qr;
+    const url = f.url_qr;
     if (url) {
-      setQrModal({ show: true, url, nombre: `${f.trabajador?.nombres} ${f.trabajador?.apellidos}` });
+      setQrModal({ show: true, url, nombre: `${f.trabajador?.persona?.nombres} ${f.trabajador?.persona?.apellidos}` });
     } else {
-      setQrModal({ show: true, url: null, nombre: `${f.trabajador?.nombres} ${f.trabajador?.apellidos}` });
+      setQrModal({ show: true, url: null, nombre: `${f.trabajador?.persona?.nombres} ${f.trabajador?.persona?.apellidos}` });
     }
   };
 
@@ -90,8 +97,8 @@ export default function Fotochecks() {
             {items.map((f) => (
               <tr key={f.id}>
                 <td data-label="Codigo"><code>{f.codigo}</code></td>
-                <td data-label="Trabajador">{f.trabajador?.nombres} {f.trabajador?.apellidos}</td>
-                <td data-label="DNI">{f.trabajador?.dni}</td>
+                <td data-label="Trabajador">{f.trabajador?.persona?.nombres} {f.trabajador?.persona?.apellidos}</td>
+                <td data-label="DNI">{f.trabajador?.persona?.dni}</td>
                 <td data-label="Emision">{new Date(f.fecha_emision).toLocaleDateString()}</td>
                 <td data-label="Estado"><span className={`badge badge-${f.estado.toLowerCase()}`}>{f.estado}</span></td>
                 <td data-label="Acciones" className="actions">

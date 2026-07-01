@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { login } from '../services/authService';
-import { FaGraduationCap, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaGraduationCap, FaEye, FaEyeSlash, FaUser, FaLock, FaShieldAlt, FaIdCard, FaQrcode } from 'react-icons/fa';
 
 export default function Login({ onLogin }) {
   const [usuario, setUsuario] = useState('');
@@ -25,51 +25,128 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div className="login-container">
-      <form className="login-form" onSubmit={handleSubmit}>
-        <div className="login-icon">
-          <FaGraduationCap size={40} />
-        </div>
-        <h1>Sistema Fotocheck</h1>
-        <p className="subtitle">Inicie sesion para continuar</p>
-
-        {error && <div className="login-error">{error}</div>}
-
-        <label>
-          Usuario
-          <input
-            type="text"
-            value={usuario}
-            onChange={(e) => setUsuario(e.target.value)}
-            placeholder="Ingrese su usuario"
-            autoFocus
-          />
-        </label>
-
-        <label>
-          Contrasena
-          <div className="password-wrapper">
-            <input
-              type={showClave ? 'text' : 'password'}
-              value={clave}
-              onChange={(e) => setClave(e.target.value)}
-              placeholder="Ingrese su contrasena"
-            />
-            <button
-              type="button"
-              className="toggle-password"
-              onClick={() => setShowClave(!showClave)}
-              tabIndex={-1}
-            >
-              {showClave ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-            </button>
+    <div className="login-wrapper">
+      <div className="login-branding">
+        <div className="login-branding-content">
+          <div className="brand-logo">
+            <FaGraduationCap size={48} />
           </div>
-        </label>
+          <h1 className="brand-title">Fotocheck</h1>
+          <p className="brand-subtitle">Sistema de Gestion de Fotochecks</p>
+          <p className="brand-institution">Universidad Nacional del Altiplano - Puno</p>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Ingresando...' : 'Ingresar'}
-        </button>
-      </form>
+          <div className="brand-features">
+            <div className="brand-feature">
+              <div className="feature-icon">
+                <FaIdCard size={20} />
+              </div>
+              <div className="feature-text">
+                <h3>Gestion de Fotochecks</h3>
+                <p>Administra credenciales digitales de forma segura</p>
+              </div>
+            </div>
+            <div className="brand-feature">
+              <div className="feature-icon">
+                <FaQrcode size={20} />
+              </div>
+              <div className="feature-text">
+                <h3>Escaneo QR</h3>
+                <p>Verificacion instantanea con codigos QR</p>
+              </div>
+            </div>
+            <div className="brand-feature">
+              <div className="feature-icon">
+                <FaShieldAlt size={20} />
+              </div>
+              <div className="feature-text">
+                <h3>Seguridad Avanzada</h3>
+                <p>Control de acceso y auditoria completa</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="brand-decoration">
+          <div className="decoration-circle decoration-circle-1"></div>
+          <div className="decoration-circle decoration-circle-2"></div>
+          <div className="decoration-circle decoration-circle-3"></div>
+        </div>
+      </div>
+
+      <div className="login-form-container">
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="form-header">
+            <h2>Bienvenido</h2>
+            <p>Ingrese sus credenciales para acceder</p>
+          </div>
+
+          {error && (
+            <div className="login-error">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="usuario">Usuario</label>
+            <div className="input-wrapper">
+              <FaUser className="input-icon" size={16} />
+              <input
+                id="usuario"
+                type="text"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                placeholder="Ingrese su usuario"
+                autoFocus
+                autoComplete="username"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="clave">Contrasena</label>
+            <div className="input-wrapper">
+              <FaLock className="input-icon" size={16} />
+              <input
+                id="clave"
+                type={showClave ? 'text' : 'password'}
+                value={clave}
+                onChange={(e) => setClave(e.target.value)}
+                placeholder="Ingrese su contrasena"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="toggle-password"
+                onClick={() => setShowClave(!showClave)}
+                tabIndex={-1}
+                aria-label={showClave ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+              >
+                {showClave ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" className="submit-btn" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                <span>Ingresando...</span>
+              </>
+            ) : (
+              <span>Ingresar</span>
+            )}
+          </button>
+
+          <div className="form-footer">
+            <p>Sistema de gestion de fotochecks universitarios</p>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

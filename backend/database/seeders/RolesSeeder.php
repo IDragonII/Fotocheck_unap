@@ -23,14 +23,26 @@ class RolesSeeder extends Seeder
                 'estado' => 'ACTIVO',
             ],
             [
-                'nombre' => 'OPERADOR',
+                'nombre' => 'ADMINISTRADOR_FOTOCHECK',
                 'descripcion' => 'Gestion de trabajadores y fotochecks',
                 'nivel' => 50,
                 'estado' => 'ACTIVO',
             ],
             [
-                'nombre' => 'CONSULTOR',
+                'nombre' => 'CONSULTOR_FOTOCHECK',
                 'descripcion' => 'Solo consulta de informacion',
+                'nivel' => 10,
+                'estado' => 'ACTIVO',
+            ],
+            [
+                'nombre' => 'ADMINISTRADOR_SOLICITUD',
+                'descripcion' => 'Gestion completa de solicitudes/tickets',
+                'nivel' => 50,
+                'estado' => 'ACTIVO',
+            ],
+            [
+                'nombre' => 'CONSULTOR_SOLICITUD',
+                'descripcion' => 'Solo consulta de solicitudes/tickets',
                 'nivel' => 10,
                 'estado' => 'ACTIVO',
             ],

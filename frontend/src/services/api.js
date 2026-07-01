@@ -1,13 +1,31 @@
+import { getToken, logout } from './authService';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 async function request(url, options = {}) {
+  const token = getToken();
+  const headers = { ...options.headers };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const isFormData = options.body instanceof FormData;
-  const headers = isFormData ? {} : { 'Content-Type': 'application/json', ...options.headers };
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const res = await fetch(`${API_URL}${url}`, {
     ...options,
     headers,
   });
+
+  if (res.status === 401) {
+    logout();
+    window.location.href = '/login';
+    throw new Error('Sesion expirada');
+  }
+
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.message || 'Error en la peticion');
@@ -22,7 +40,12 @@ export const api = {
   put: (url, body) => request(url, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (url) => request(url, { method: 'DELETE' }),
   download: async (url, filename) => {
-    const res = await fetch(`${API_URL}${url}`);
+    const token = getToken();
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${API_URL}${url}`, { headers });
     if (!res.ok) throw new Error('Error al descargar');
     const blob = await res.blob();
     const link = document.createElement('a');

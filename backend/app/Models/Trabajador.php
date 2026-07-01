@@ -11,11 +11,9 @@ class Trabajador extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'dni', 'codigo_universitario', 'codigo_unico', 'codigo_nfs', 'nombres', 'apellidos', 'empresa', 'area', 'dependencia', 'cargo',
-        'telefono', 'correo', 'direccion', 'fecha_nacimiento',
-        'fecha_ingreso', 'grupo_sanguineo', 'foto', 'url_foto_presencial', 'url_foto_virtual',
-        'url_qr_image', 'url_qr', 'estado', 'observaciones',
-        'regimen', 'facultad', 'escuela_profesional', 'resolucion_rectoral', 'vigencia', 'fecha_emision',
+        'persona_id', 'codigo_unico', 'codigo_nfs', 'empresa', 'area', 'dependencia',
+        'cargo', 'regimen', 'resolucion_rectoral', 'vigencia', 'fecha_emision', 'fecha_ingreso',
+
     ];
 
     protected $hidden = [];
@@ -23,10 +21,14 @@ class Trabajador extends Model
     protected function casts(): array
     {
         return [
-            'fecha_nacimiento' => 'date',
             'fecha_ingreso' => 'date',
             'fecha_emision' => 'date',
         ];
+    }
+
+    public function persona()
+    {
+        return $this->belongsTo(Persona::class);
     }
 
     public function fotochecks()

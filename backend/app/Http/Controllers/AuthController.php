@@ -76,8 +76,32 @@ class AuthController extends Controller
             ->where('usuario_roles.usuario_id', $usuario->id)
             ->pluck('roles.nombre', 'roles.id');
 
-        $sessionLifetime = (int) config('session.lifetime', 120);
-        $expiresAt = now()->addMinutes($sessionLifetime)->toIso8601String();
+        $roleIds = $roles->keys();
+        $nivelMax = DB::table('roles')->whereIn('id', $roleIds)->max('nivel') ?? 0;
+
+        $permisos = DB::table('rol_permisos')
+            ->join('permisos', 'permisos.id', '=', 'rol_permisos.permiso_id')
+            ->whereIn('rol_permisos.rol_id', $roleIds)
+            ->pluck('permisos.nombre');
+
+        $permisosNegados = DB::table('usuario_permisos')
+            ->join('permisos', 'permisos.id', '=', 'usuario_permisos.permiso_id')
+            ->where('usuario_permisos.usuario_id', $usuario->id)
+            ->where('usuario_permisos.tipo', 'negado')
+            ->pluck('permisos.nombre');
+
+        $permisosExtras = DB::table('usuario_permisos')
+            ->join('permisos', 'permisos.id', '=', 'usuario_permisos.permiso_id')
+            ->where('usuario_permisos.usuario_id', $usuario->id)
+            ->where('usuario_permisos.tipo', 'extra')
+            ->pluck('permisos.nombre');
+
+        $todosPermisos = $permisos->merge($permisosExtras)
+            ->filter(fn ($p) => ! $permisosNegados->contains($p))
+            ->unique()
+            ->values();
+
+        $token = $usuario->createToken('auth-token', ['*'], now()->addMinutes((int) config('session.lifetime', 120)))->plainTextToken;
 
         return response()->json([
             'usuario' => [
@@ -87,8 +111,17 @@ class AuthController extends Controller
                 'apellidos' => $usuario->apellidos,
                 'estado' => $usuario->estado,
                 'roles' => $roles,
+                'nivel_max' => $nivelMax,
+                'permisos' => $todosPermisos,
             ],
-            'expires_at' => $expiresAt,
+            'token' => $token,
         ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json(['message' => 'Sesion cerrada']);
     }
 }

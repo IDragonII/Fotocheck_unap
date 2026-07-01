@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { hasPermission } from '../services/authService';
+import { useToast } from '../components/Toast';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import './CrudPage.css';
 
 export default function Roles() {
+  const { toast, confirm } = useToast();
   const [items, setItems] = useState([]);
   const [permisos, setPermisos] = useState([]);
   const [form, setForm] = useState({ nombre: '', descripcion: '', nivel: 50, estado: 'ACTIVO', permisos: [] });
   const [editing, setEditing] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState('');
+
+  const canCreate = hasPermission('roles_crear');
+  const canEdit = hasPermission('roles_editar');
+  const canDelete = hasPermission('roles_eliminar');
 
   const load = () => {
     api.get('/roles').then(setItems);
@@ -40,9 +47,14 @@ export default function Roles() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Eliminar este rol?')) return;
-    await api.delete(`/roles/${id}`);
-    load();
+    if (!await confirm('Eliminar este rol?')) return;
+    try {
+      await api.delete(`/roles/${id}`);
+      toast.success('Rol eliminado');
+      load();
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const togglePermiso = (permId) => {
@@ -66,7 +78,7 @@ export default function Roles() {
     <div className="crud-page">
       <div className="page-header">
         <h1>Roles</h1>
-        <button className="btn-primary" onClick={openNew}><FaPlus /> Nuevo</button>
+        {canCreate && <button className="btn-primary" onClick={openNew}><FaPlus /> Nuevo</button>}
       </div>
 
       <div className="table-wrapper">
@@ -78,7 +90,7 @@ export default function Roles() {
               <th>Nivel</th>
               <th>Permisos</th>
               <th>Estado</th>
-              <th>Acciones</th>
+              {(canEdit || canDelete) && <th>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -89,10 +101,12 @@ export default function Roles() {
                 <td data-label="Nivel">{r.nivel}</td>
                 <td data-label="Permisos">{r.permisos?.length || 0}</td>
                 <td data-label="Estado"><span className={`badge badge-${r.estado.toLowerCase()}`}>{r.estado}</span></td>
-                <td data-label="Acciones" className="actions">
-                  <button className="btn-icon" onClick={() => openEdit(r)}><FaEdit /></button>
-                  <button className="btn-icon btn-danger" onClick={() => handleDelete(r.id)}><FaTrash /></button>
-                </td>
+                {(canEdit || canDelete) && (
+                  <td data-label="Acciones" className="actions">
+                    {canEdit && <button className="btn-icon" onClick={() => openEdit(r)}><FaEdit /></button>}
+                    {canDelete && <button className="btn-icon btn-danger" onClick={() => handleDelete(r.id)}><FaTrash /></button>}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

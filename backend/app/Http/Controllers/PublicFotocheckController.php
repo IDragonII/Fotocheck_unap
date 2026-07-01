@@ -11,7 +11,7 @@ class PublicFotocheckController extends Controller
 {
     public function show($codigo, Request $request)
     {
-        $trabajador = Trabajador::where('codigo_unico', $codigo)->first();
+        $trabajador = Trabajador::with('persona')->where('codigo_unico', $codigo)->first();
 
         if (! $trabajador) {
             return response()->json(['message' => 'Trabajador no encontrado'], 404);
@@ -40,27 +40,33 @@ class PublicFotocheckController extends Controller
             ]);
         }
 
+        $persona = $trabajador->persona;
+        $correo = $persona->correos()->where('principal', true)->first();
+        $estudiante = $persona->estudiantes()->first();
+
         return response()->json([
             'trabajador' => [
-                'dni' => $trabajador->dni,
-                'codigo_universitario' => $trabajador->codigo_universitario,
-                'nombres' => $trabajador->nombres,
-                'apellidos' => $trabajador->apellidos,
-                'nombre_completo' => $trabajador->nombres.' '.$trabajador->apellidos,
+                'dni' => $persona->dni,
+                'nombres' => $persona->nombres,
+                'apellidos' => $persona->apellidos,
+                'nombre_completo' => $persona->nombre_completo,
+                'telefono' => $persona->telefono,
+                'direccion' => $persona->direccion,
+                'url_foto_presencial' => $persona->url_foto_presencial,
+                'url_foto_virtual' => $persona->url_foto_virtual,
+                'correo' => $correo?->correo,
+                'grupo_sanguineo' => $persona->grupo_sanguineo,
                 'cargo' => $trabajador->cargo,
                 'area' => $trabajador->area,
                 'dependencia' => $trabajador->dependencia,
                 'empresa' => $trabajador->empresa,
-                'telefono' => $trabajador->telefono,
-                'correo' => $trabajador->correo,
-                'foto' => $trabajador->url_foto_presencial ?: $trabajador->url_foto_virtual,
-                'url_qr' => $trabajador->url_qr,
                 'codigo' => $trabajador->codigo_unico,
+                'codigo_universitario' => $estudiante?->codigo_universitario,
                 'codigo_nfs' => $trabajador->codigo_nfs,
                 'fecha_ingreso' => $trabajador->fecha_ingreso,
                 'regimen' => $trabajador->regimen,
-                'facultad' => $trabajador->facultad,
-                'escuela_profesional' => $trabajador->escuela_profesional,
+                'facultad' => $estudiante?->facultad,
+                'escuela_profesional' => $estudiante?->escuela_profesional,
                 'resolucion_rectoral' => $trabajador->resolucion_rectoral,
                 'vigencia' => $trabajador->vigencia,
                 'fecha_emision' => $trabajador->fecha_emision,
@@ -70,6 +76,7 @@ class PublicFotocheckController extends Controller
                 'estado' => $fotocheck->estado,
                 'fecha_emision' => $fotocheck->fecha_emision,
                 'url_qr' => $fotocheck->url_qr,
+                'qr_imagen' => $fotocheck->qr_imagen,
             ],
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');

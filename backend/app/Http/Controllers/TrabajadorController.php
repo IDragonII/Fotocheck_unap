@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CorreoPersona;
+use App\Models\Fotocheck;
+use App\Models\Persona;
 use App\Models\Trabajador;
 use App\Traits\Loggable;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -18,11 +20,11 @@ class TrabajadorController extends Controller
 
     public function index(Request $request)
     {
-        $query = Trabajador::query();
+        $query = Trabajador::with('persona.correos');
 
         if ($request->filled('buscar')) {
             $buscar = $request->buscar;
-            $query->where(function ($q) use ($buscar) {
+            $query->whereHas('persona', function ($q) use ($buscar) {
                 $q->where('nombres', 'like', "%{$buscar}%")
                     ->orWhere('apellidos', 'like', "%{$buscar}%")
                     ->orWhere('dni', 'like', "%{$buscar}%");
@@ -30,10 +32,12 @@ class TrabajadorController extends Controller
         }
 
         if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
+            $query->whereHas('persona', function ($q) use ($request) {
+                $q->where('estado', $request->estado);
+            });
         }
 
-        $trabajadores = $query->orderBy('nombres')->paginate(15);
+        $trabajadores = $query->orderBy('created_at', 'desc')->paginate(15);
 
         return response()->json($trabajadores);
     }
@@ -41,45 +45,163 @@ class TrabajadorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'dni' => 'required|string|max:8|unique:trabajadores,dni',
+            'dni' => 'required|string|max:8|unique:personas,dni',
             'nombres' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
+            'codigo_unico' => 'required|string|max:50|unique:trabajadores,codigo_unico',
         ]);
 
-        $trabajador = Trabajador::create($request->all());
-        $this->log($request, 'Creacion', 'trabajadores', $trabajador->id, "Trabajador creado: {$trabajador->nombres} {$trabajador->apellidos}");
+        $persona = Persona::create([
+            'dni' => $request->dni,
+            'nombres' => $request->nombres,
+            'apellidos' => $request->apellidos,
+            'telefono' => $request->telefono,
+            'direccion' => $request->direccion,
+            'fecha_nacimiento' => $request->fecha_nacimiento,
+            'grupo_sanguineo' => $request->grupo_sanguineo,
+            'url_foto_presencial' => $request->url_foto_presencial,
+            'url_foto_virtual' => $request->url_foto_virtual,
+            'estado' => $request->estado ?? 'ACTIVO',
+        ]);
 
-        return response()->json($trabajador, 201);
+        if ($request->filled('correo')) {
+            CorreoPersona::create([
+                'persona_id' => $persona->id,
+                'correo' => $request->correo,
+                'tipo' => 'INSTITUCIONAL',
+                'principal' => true,
+            ]);
+        }
+
+        $trabajador = Trabajador::create([
+            'persona_id' => $persona->id,
+            'codigo_unico' => $request->codigo_unico,
+            'codigo_nfs' => $request->codigo_nfs,
+            'empresa' => $request->empresa,
+            'area' => $request->area,
+            'dependencia' => $request->dependencia,
+            'cargo' => $request->cargo,
+            'regimen' => $request->regimen,
+            'resolucion_rectoral' => $request->resolucion_rectoral,
+            'vigencia' => $request->vigencia,
+            'fecha_emision' => $request->fecha_emision,
+            'fecha_ingreso' => $request->fecha_ingreso,
+        ]);
+
+        $this->log($request, 'Creacion', 'trabajadores', $trabajador->id, "Trabajador creado: {$persona->nombres} {$persona->apellidos}");
+
+        return response()->json($trabajador->load('persona'), 201);
     }
 
     public function show($id)
     {
-        $trabajador = Trabajador::findOrFail($id);
+        $trabajador = Trabajador::with('persona')->findOrFail($id);
 
         return response()->json($trabajador);
     }
 
     public function update(Request $request, $id)
     {
-        $trabajador = Trabajador::findOrFail($id);
+        $trabajador = Trabajador::with('persona.correos')->findOrFail($id);
 
         $request->validate([
-            'dni' => 'required|string|max:8|unique:trabajadores,dni,'.$id,
+            'dni' => 'required|string|max:8|unique:personas,dni,'.$trabajador->persona_id,
             'nombres' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
+            'codigo_unico' => 'required|string|max:50|unique:trabajadores,codigo_unico,'.$id,
         ]);
 
-        $trabajador->update($request->all());
-        $this->log($request, 'Actualizacion', 'trabajadores', $trabajador->id, "Trabajador actualizado: {$trabajador->nombres} {$trabajador->apellidos}");
+        $trabajador->persona->update([
+            'dni' => $request->dni,
+            'nombres' => $request->nombres,
+            'apellidos' => $request->apellidos,
+            'telefono' => $request->telefono,
+            'direccion' => $request->direccion,
+            'fecha_nacimiento' => $request->fecha_nacimiento,
+            'grupo_sanguineo' => $request->grupo_sanguineo,
+            'url_foto_presencial' => $request->url_foto_presencial,
+            'url_foto_virtual' => $request->url_foto_virtual,
+            'estado' => $request->estado,
+        ]);
 
-        return response()->json($trabajador);
+        if ($request->has('correos')) {
+            $correosRecibidos = $request->correos;
+            $correosExistentes = $trabajador->persona->correos()->pluck('id', 'correo')->toArray();
+
+            $correosRecibidosArr = is_array($correosRecibidos) ? $correosRecibidos : [$correosRecibidos];
+            $correosRecibidosValues = array_column($correosRecibidosArr, 'correo');
+
+            $idsAEliminar = [];
+            foreach ($correosExistentes as $correo => $correoId) {
+                if (! in_array($correo, $correosRecibidosValues)) {
+                    $idsAEliminar[] = $correoId;
+                }
+            }
+            if (! empty($idsAEliminar)) {
+                CorreoPersona::whereIn('id', $idsAEliminar)->delete();
+            }
+
+            foreach ($correosRecibidosArr as $correoData) {
+                $correoStr = is_string($correoData) ? $correoData : ($correoData['correo'] ?? '');
+                if ($correoStr === '') {
+                    continue;
+                }
+
+                $existing = CorreoPersona::where('persona_id', $trabajador->persona_id)
+                    ->where('correo', $correoStr)
+                    ->first();
+
+                if (! $existing) {
+                    $tienePrincipal = $trabajador->persona->correos()->where('principal', true)->exists();
+                    CorreoPersona::create([
+                        'persona_id' => $trabajador->persona_id,
+                        'correo' => $correoStr,
+                        'tipo' => is_array($correoData) ? ($correoData['tipo'] ?? 'INSTITUCIONAL') : 'INSTITUCIONAL',
+                        'principal' => ! $tienePrincipal,
+                    ]);
+                }
+            }
+
+            $trabajador->persona->load('correos');
+        } elseif ($request->filled('correo')) {
+            $correo = $trabajador->persona->correos()->where('principal', true)->first();
+            if ($correo) {
+                $correo->update(['correo' => $request->correo]);
+            } else {
+                CorreoPersona::create([
+                    'persona_id' => $trabajador->persona_id,
+                    'correo' => $request->correo,
+                    'tipo' => 'INSTITUCIONAL',
+                    'principal' => true,
+                ]);
+            }
+        }
+
+        $trabajador->update([
+            'codigo_unico' => $request->codigo_unico,
+            'codigo_nfs' => $request->codigo_nfs,
+            'empresa' => $request->empresa,
+            'area' => $request->area,
+            'dependencia' => $request->dependencia,
+            'cargo' => $request->cargo,
+            'regimen' => $request->regimen,
+            'resolucion_rectoral' => $request->resolucion_rectoral,
+            'vigencia' => $request->vigencia,
+            'fecha_emision' => $request->fecha_emision,
+            'fecha_ingreso' => $request->fecha_ingreso,
+        ]);
+
+        $this->log($request, 'Actualizacion', 'trabajadores', $trabajador->id, "Trabajador actualizado: {$trabajador->persona->nombres} {$trabajador->persona->apellidos}");
+
+        return response()->json($trabajador->load('persona.correos'));
     }
 
     public function destroy($id)
     {
-        $trabajador = Trabajador::findOrFail($id);
+        $trabajador = Trabajador::with('persona')->findOrFail($id);
+        $nombre = "{$trabajador->persona->nombres} {$trabajador->persona->apellidos}";
         $trabajador->delete();
-        $this->log(request(), 'Eliminacion', 'trabajadores', $id, "Trabajador eliminado: {$trabajador->nombres} {$trabajador->apellidos}");
+        $this->log(request(), 'Eliminacion', 'trabajadores', $id, "Trabajador eliminado: {$nombre}");
 
         return response()->json(['message' => 'Trabajador eliminado']);
     }
@@ -125,96 +247,202 @@ class TrabajadorController extends Controller
 
             if ($dni === '' || $nombres === '' || $apellidos === '' || $codigoUnico === '') {
                 $saltados++;
+
                 continue;
             }
 
-            $codigoUniversitario = trim((string) ($data['CODIGO_UNIVERSITARIO'] ?? ''));
+            $telefono = trim((string) ($data['TELEFONO'] ?? ''));
+            $correo = trim((string) ($data['CORREO'] ?? ''));
+            $direccion = trim((string) ($data['DIRECCION'] ?? ''));
+            $grupoSanguineo = trim((string) ($data['GRUPO_SANGUINEO'] ?? ''));
+            $urlFotoPresencial = trim((string) ($data['URL_FOTO_PRESENCIAL'] ?? ''));
+            $urlFotoVirtual = trim((string) ($data['URL_FOTO_VIRTUAL'] ?? ''));
             $empresa = trim((string) ($data['EMPRESA'] ?? ''));
             $area = trim((string) ($data['AREA'] ?? ''));
             $dependencia = trim((string) ($data['DEPENDENCIA'] ?? ''));
-            $telefono = trim((string) ($data['TELEFONO'] ?? ''));
-            $correo = trim((string) ($data['CORREO'] ?? ''));
-            $fechaIngreso = trim((string) ($data['FECHA_INGRESO'] ?? ''));
+            $cargo = trim((string) ($data['CONDICION'] ?? ''));
             $regimen = trim((string) ($data['REGIMEN'] ?? ''));
-            $facultad = trim((string) ($data['FACULTAD'] ?? ''));
-            $escuelaProfesional = trim((string) ($data['ESCUELA_PROFESIONAL'] ?? ''));
             $resolucionRectoral = trim((string) ($data['RESOLUCION_RECTORAL'] ?? ''));
             $vigencia = trim((string) ($data['VIGENCIA'] ?? ''));
             $fechaEmision = trim((string) ($data['FECHA_EMISION'] ?? ''));
-            $cargo = trim((string) ($data['CONDICION'] ?? ''));
+            $fechaIngreso = trim((string) ($data['FECHA_INGRESO'] ?? ''));
             $codigoNfs = trim((string) ($data['CODIGO_NFS'] ?? ''));
-            $urlFotoPresencial = trim((string) ($data['URL_FOTO_PRESENCIAL'] ?? ''));
-            $urlFotoVirtual = trim((string) ($data['URL_FOTO_VIRTUAL'] ?? ''));
             $urlQrImage = trim((string) ($data['URL_QR_IMAGE'] ?? ''));
             $urlQr = trim((string) ($data['URL_QR'] ?? ''));
 
-            $existe = Trabajador::where('dni', $dni)->first();
+            $existeTrabajador = Trabajador::where('codigo_unico', $codigoUnico)->first();
 
-            if ($existe) {
-                $campos = [
+            if ($existeTrabajador) {
+                $existeTrabajador->persona->update([
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
-                ];
-                if ($codigoUniversitario !== '') $campos['codigo_universitario'] = $codigoUniversitario;
-                if ($empresa !== '') $campos['empresa'] = $empresa;
-                if ($area !== '') $campos['area'] = $area;
-                if ($dependencia !== '') $campos['dependencia'] = $dependencia;
-                if ($telefono !== '') $campos['telefono'] = $telefono;
-                if ($correo !== '') $campos['correo'] = $correo;
-                if ($fechaIngreso !== '') $campos['fecha_ingreso'] = $fechaIngreso;
-                if ($regimen !== '') $campos['regimen'] = $regimen;
-                if ($facultad !== '') $campos['facultad'] = $facultad;
-                if ($escuelaProfesional !== '') $campos['escuela_profesional'] = $escuelaProfesional;
-                if ($resolucionRectoral !== '') $campos['resolucion_rectoral'] = $resolucionRectoral;
-                if ($vigencia !== '') $campos['vigencia'] = $vigencia;
-                if ($fechaEmision !== '') $campos['fecha_emision'] = $fechaEmision;
-                if ($cargo !== '') $campos['cargo'] = $cargo;
-                if ($codigoUnico !== '') $campos['codigo_unico'] = $codigoUnico;
-                if ($codigoNfs !== '') $campos['codigo_nfs'] = $codigoNfs;
-                if ($urlFotoPresencial !== '') $campos['url_foto_presencial'] = $urlFotoPresencial;
-                if ($urlFotoVirtual !== '') $campos['url_foto_virtual'] = $urlFotoVirtual;
-                if ($urlQrImage !== '') $campos['url_qr_image'] = $urlQrImage;
-                if ($urlQr !== '') $campos['url_qr'] = $urlQr;
+                    'telefono' => $telefono !== '' ? $telefono : $existeTrabajador->persona->telefono,
+                    'direccion' => $direccion !== '' ? $direccion : $existeTrabajador->persona->direccion,
+                    'grupo_sanguineo' => $grupoSanguineo !== '' ? $grupoSanguineo : $existeTrabajador->persona->grupo_sanguineo,
+                    'url_foto_presencial' => $urlFotoPresencial !== '' ? $urlFotoPresencial : $existeTrabajador->persona->url_foto_presencial,
+                    'url_foto_virtual' => $urlFotoVirtual !== '' ? $urlFotoVirtual : $existeTrabajador->persona->url_foto_virtual,
+                ]);
 
-                $existe->update($campos);
+                if ($correo !== '') {
+                    $existeCorreo = $existeTrabajador->persona->correos()
+                        ->where('correo', $correo)
+                        ->exists();
+
+                    if (! $existeCorreo) {
+                        $tienePrincipal = $existeTrabajador->persona->correos()
+                            ->where('principal', true)
+                            ->exists();
+
+                        CorreoPersona::create([
+                            'persona_id' => $existeTrabajador->persona_id,
+                            'correo' => $correo,
+                            'tipo' => 'INSTITUCIONAL',
+                            'principal' => ! $tienePrincipal,
+                        ]);
+                    }
+                }
+
+                $camposTrabajador = [];
+                if ($empresa !== '') {
+                    $camposTrabajador['empresa'] = $empresa;
+                }
+                if ($area !== '') {
+                    $camposTrabajador['area'] = $area;
+                }
+                if ($dependencia !== '') {
+                    $camposTrabajador['dependencia'] = $dependencia;
+                }
+                if ($cargo !== '') {
+                    $camposTrabajador['cargo'] = $cargo;
+                }
+                if ($regimen !== '') {
+                    $camposTrabajador['regimen'] = $regimen;
+                }
+                if ($resolucionRectoral !== '') {
+                    $camposTrabajador['resolucion_rectoral'] = $resolucionRectoral;
+                }
+                if ($vigencia !== '') {
+                    $camposTrabajador['vigencia'] = $vigencia;
+                }
+                if ($fechaEmision !== '') {
+                    $camposTrabajador['fecha_emision'] = $fechaEmision;
+                }
+                if ($fechaIngreso !== '') {
+                    $camposTrabajador['fecha_ingreso'] = $fechaIngreso;
+                }
+                if ($codigoNfs !== '') {
+                    $camposTrabajador['codigo_nfs'] = $codigoNfs;
+                }
+                if (! empty($camposTrabajador)) {
+                    $existeTrabajador->update($camposTrabajador);
+                }
+
+                $fotocheck = Fotocheck::where('trabajador_id', $existeTrabajador->id)
+                    ->where('estado', 'VIGENTE')
+                    ->orderBy('fecha_emision', 'desc')
+                    ->first();
+
+                if ($fotocheck) {
+                    $camposFotocheck = [];
+                    if ($urlQrImage !== '') {
+                        $camposFotocheck['qr_imagen'] = $urlQrImage;
+                    }
+                    if ($urlQr !== '') {
+                        $camposFotocheck['url_qr'] = $urlQr;
+                    }
+                    if (! empty($camposFotocheck)) {
+                        $fotocheck->update($camposFotocheck);
+                    }
+                }
                 $actualizados++;
             } else {
-                $camposCreate = [
-                    'dni' => $dni,
-                    'nombres' => $nombres,
-                    'apellidos' => $apellidos,
-                    'estado' => 'ACTIVO',
-                ];
-                if ($codigoUniversitario !== '') $camposCreate['codigo_universitario'] = $codigoUniversitario;
-                if ($empresa !== '') $camposCreate['empresa'] = $empresa;
-                if ($area !== '') $camposCreate['area'] = $area;
-                if ($dependencia !== '') $camposCreate['dependencia'] = $dependencia;
-                if ($telefono !== '') $camposCreate['telefono'] = $telefono;
-                if ($correo !== '') $camposCreate['correo'] = $correo;
-                if ($fechaIngreso !== '') $camposCreate['fecha_ingreso'] = $fechaIngreso;
-                if ($regimen !== '') $camposCreate['regimen'] = $regimen;
-                if ($facultad !== '') $camposCreate['facultad'] = $facultad;
-                if ($escuelaProfesional !== '') $camposCreate['escuela_profesional'] = $escuelaProfesional;
-                if ($resolucionRectoral !== '') $camposCreate['resolucion_rectoral'] = $resolucionRectoral;
-                if ($vigencia !== '') $camposCreate['vigencia'] = $vigencia;
-                if ($fechaEmision !== '') $camposCreate['fecha_emision'] = $fechaEmision;
-                if ($cargo !== '') $camposCreate['cargo'] = $cargo;
-                if ($codigoUnico !== '') $camposCreate['codigo_unico'] = $codigoUnico;
-                if ($codigoNfs !== '') $camposCreate['codigo_nfs'] = $codigoNfs;
-                if ($urlFotoPresencial !== '') $camposCreate['url_foto_presencial'] = $urlFotoPresencial;
-                if ($urlFotoVirtual !== '') $camposCreate['url_foto_virtual'] = $urlFotoVirtual;
-                if ($urlQrImage !== '') $camposCreate['url_qr_image'] = $urlQrImage;
-                if ($urlQr !== '') $camposCreate['url_qr'] = $urlQr;
+                $persona = Persona::where('dni', $dni)->first();
 
-                $nuevo = Trabajador::create($camposCreate);
+                if ($persona) {
+                    $camposPersona = [];
+                    if ($nombres !== $persona->nombres) {
+                        $camposPersona['nombres'] = $nombres;
+                    }
+                    if ($apellidos !== $persona->apellidos) {
+                        $camposPersona['apellidos'] = $apellidos;
+                    }
+                    if ($telefono !== '' && $telefono !== $persona->telefono) {
+                        $camposPersona['telefono'] = $telefono;
+                    }
+                    if ($direccion !== '' && $direccion !== $persona->direccion) {
+                        $camposPersona['direccion'] = $direccion;
+                    }
+                    if ($grupoSanguineo !== '' && $grupoSanguineo !== $persona->grupo_sanguineo) {
+                        $camposPersona['grupo_sanguineo'] = $grupoSanguineo;
+                    }
+                    if ($urlFotoPresencial !== '' && $urlFotoPresencial !== $persona->url_foto_presencial) {
+                        $camposPersona['url_foto_presencial'] = $urlFotoPresencial;
+                    }
+                    if ($urlFotoVirtual !== '' && $urlFotoVirtual !== $persona->url_foto_virtual) {
+                        $camposPersona['url_foto_virtual'] = $urlFotoVirtual;
+                    }
+
+                    if (! empty($camposPersona)) {
+                        $persona->update($camposPersona);
+                    }
+                } else {
+                    $persona = Persona::create([
+                        'dni' => $dni,
+                        'nombres' => $nombres,
+                        'apellidos' => $apellidos,
+                        'telefono' => $telefono,
+                        'direccion' => $direccion,
+                        'grupo_sanguineo' => $grupoSanguineo,
+                        'url_foto_presencial' => $urlFotoPresencial,
+                        'url_foto_virtual' => $urlFotoVirtual,
+                        'estado' => 'ACTIVO',
+                    ]);
+                }
+
+                if ($correo !== '') {
+                    $existeCorreo = $persona->correos()
+                        ->where('correo', $correo)
+                        ->exists();
+
+                    if (! $existeCorreo) {
+                        $tienePrincipal = $persona->correos()
+                            ->where('principal', true)
+                            ->exists();
+
+                        CorreoPersona::create([
+                            'persona_id' => $persona->id,
+                            'correo' => $correo,
+                            'tipo' => 'INSTITUCIONAL',
+                            'principal' => ! $tienePrincipal,
+                        ]);
+                    }
+                }
+
+                $nuevo = Trabajador::create([
+                    'persona_id' => $persona->id,
+                    'codigo_unico' => $codigoUnico,
+                    'codigo_nfs' => $codigoNfs,
+                    'empresa' => $empresa,
+                    'area' => $area,
+                    'dependencia' => $dependencia,
+                    'cargo' => $cargo,
+                    'regimen' => $regimen,
+                    'resolucion_rectoral' => $resolucionRectoral,
+                    'vigencia' => $vigencia,
+                    'fecha_emision' => $fechaEmision !== '' ? $fechaEmision : null,
+                    'fecha_ingreso' => $fechaIngreso !== '' ? $fechaIngreso : null,
+                ]);
 
                 if ($nuevo->codigo_unico) {
-                    $codigo = 'FC-'.strtoupper(Str::random(8));
-                    $urlPublica = config('app.frontend_url', 'http://localhost:5173')."/{$nuevo->codigo_unico}";
-                    DB::table('fotochecks')->insert([
+                    $codigo = $urlQr !== '' ? null : 'FC-'.strtoupper(Str::random(8));
+                    $urlPublica = $urlQr !== ''
+                        ? $urlQr
+                        : config('app.frontend_url', 'http://localhost:5173')."/{$nuevo->codigo_unico}";
+                    Fotocheck::create([
                         'trabajador_id' => $nuevo->id,
                         'codigo' => $codigo,
                         'url_qr' => $urlPublica,
+                        'qr_imagen' => $urlQrImage !== '' ? $urlQrImage : null,
                         'estado' => 'VIGENTE',
                         'fecha_emision' => now(),
                     ]);
@@ -236,39 +464,38 @@ class TrabajadorController extends Controller
 
     public function plantilla()
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = [
-            'DNI', 'CODIGO_UNIVERSITARIO', 'NOMBRES', 'APELLIDOS', 'EMPRESA', 'AREA', 'DEPENDENCIA', 'CARGO',
-            'TELEFONO', 'CORREO', 'FECHA_INGRESO', 'REGIMEN', 'FACULTAD', 'ESCUELA_PROFESIONAL',
-            'RESOLUCION_RECTORAL', 'VIGENCIA', 'FECHA_EMISION',
-            'CONDICION', 'CODIGO_UNICO', 'CODIGO_NFS',
-            'URL_FOTO_PRESENCIAL', 'URL_FOTO_VIRTUAL', 'URL_QR_IMAGE', 'URL_QR',
+            'DNI', 'NOMBRES', 'APELLIDOS', 'TELEFONO', 'CORREO', 'DIRECCION',
+            'GRUPO_SANGUINEO', 'URL_FOTO_PRESENCIAL', 'URL_FOTO_VIRTUAL',
+            'EMPRESA', 'AREA', 'DEPENDENCIA', 'CONDICION', 'REGIMEN',
+            'RESOLUCION_RECTORAL', 'VIGENCIA', 'FECHA_EMISION', 'FECHA_INGRESO',
+            'CODIGO_UNICO', 'CODIGO_NFS', 'URL_QR_IMAGE', 'URL_QR',
         ];
 
-        $colLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X'];
+        $colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'];
 
         foreach ($headers as $i => $header) {
-            $cell = $sheet->getCell($colLetters[$i] . '1');
+            $cell = $sheet->getCell($colLetters[$i].'1');
             $cell->setValue($header);
             $cell->getStyle()->getFont()->setBold(true);
         }
 
         $sample = [
-            '70123456', 'UNI001', 'JUAN', 'PEREZ GARCIA', 'UNA', 'FACULTAD DE INGENIERIA', 'DEP. SISTEMAS', 'DOCENTE',
-            '951234567', 'juan.perez@unap.edu.pe', '2020-01-15', 'NOMBRADO', 'FACULTAD DE INGENIERIA', 'INGENIERIA DE SISTEMAS',
-            'RR-001-2020', '2025-12-31', '2020-01-15',
-            'NOMBRADO', 'ABC12345', 'NFS001',
-            'https://drive.google.com/file/d/ABC123/view', 'https://drive.google.com/file/d/XYZ789/view',
-            'https://dominio.com/ABC12345', 'https://dominio.com/qr/ABC12345',
+            '70123456', 'JUAN', 'PEREZ GARCIA', '951234567', 'juan.perez@unap.edu.pe', 'Av. Principal 123',
+            'O+', 'https://drive.google.com/file/d/ABC/presencial', 'https://drive.google.com/file/d/ABC/virtual',
+            'UNA', 'FACULTAD DE INGENIERIA', 'DEP. SISTEMAS', 'DOCENTE', 'NOMBRADO',
+            'RR-001-2020', '2025-12-31', '2020-01-15', '2020-01-15',
+            'ABC12345', 'NFS001', 'https://drive.google.com/file/d/ABC/qr-image', 'https://dominio.com/qr/ABC',
         ];
 
         foreach ($sample as $i => $value) {
-            $sheet->getCell($colLetters[$i] . '2')->setValue($value);
+            $sheet->getCell($colLetters[$i].'2')->setValue($value);
         }
 
-        foreach (range('A', 'X') as $col) {
+        foreach (range('A', 'W') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

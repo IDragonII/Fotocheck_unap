@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: env.VITE_BACKEND_URL,
           changeOrigin: true,
+          bypass: (req) => {
+            if (req.url.startsWith('/api-keys')) {
+              return req.url;
+            }
+          },
         },
       },
     },

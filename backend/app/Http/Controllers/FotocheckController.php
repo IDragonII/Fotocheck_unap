@@ -14,11 +14,11 @@ class FotocheckController extends Controller
 
     public function index(Request $request)
     {
-        $query = Fotocheck::with('trabajador');
+        $query = Fotocheck::with('trabajador.persona');
 
         if ($request->filled('buscar')) {
             $buscar = $request->buscar;
-            $query->whereHas('trabajador', function ($q) use ($buscar) {
+            $query->whereHas('trabajador.persona', function ($q) use ($buscar) {
                 $q->where('nombres', 'like', "%{$buscar}%")
                     ->orWhere('apellidos', 'like', "%{$buscar}%")
                     ->orWhere('dni', 'like', "%{$buscar}%");
@@ -40,7 +40,7 @@ class FotocheckController extends Controller
             'trabajador_id' => 'required|exists:trabajadores,id',
         ]);
 
-        $trabajador = Trabajador::findOrFail($request->trabajador_id);
+        $trabajador = Trabajador::with('persona')->findOrFail($request->trabajador_id);
         $codigo = 'FC-'.strtoupper(Str::random(8));
         $urlPublica = config('app.frontend_url', 'http://localhost:5173')."/{$trabajador->codigo_unico}";
 
@@ -51,14 +51,14 @@ class FotocheckController extends Controller
             'estado' => 'VIGENTE',
         ]);
 
-        $this->log($request, 'Creacion', 'fotochecks', $fotocheck->id, "Fotocheck creado: {$codigo} para {$trabajador->nombres} {$trabajador->apellidos}");
+        $this->log($request, 'Creacion', 'fotochecks', $fotocheck->id, "Fotocheck creado: {$codigo} para {$trabajador->persona->nombres} {$trabajador->persona->apellidos}");
 
-        return response()->json($fotocheck->load('trabajador'), 201);
+        return response()->json($fotocheck->load('trabajador.persona'), 201);
     }
 
     public function show($id)
     {
-        $fotocheck = Fotocheck::with('trabajador')->findOrFail($id);
+        $fotocheck = Fotocheck::with('trabajador.persona')->findOrFail($id);
 
         return response()->json($fotocheck);
     }
@@ -83,10 +83,14 @@ class FotocheckController extends Controller
 
     public function generar(Request $request)
     {
-        $trabajadores = Trabajador::where('estado', 'ACTIVO')->get();
+        $trabajadores = Trabajador::with('persona')->get();
         $creados = 0;
 
         foreach ($trabajadores as $t) {
+            if ($t->persona && $t->persona->estado !== 'ACTIVO') {
+                continue;
+            }
+
             $tieneVigente = Fotocheck::where('trabajador_id', $t->id)
                 ->where('estado', 'VIGENTE')
                 ->exists();
