@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { FaSyncAlt } from 'react-icons/fa';
+import { FaSyncAlt, FaUserPlus } from 'react-icons/fa';
 import logoUrl from '../assets/logo.png';
 import firmaUrl from '../assets/firma.png';
 import marcaAguaUrl from '../assets/marca_agua.png';
@@ -19,6 +19,29 @@ function loadImage(src) {
     img.src = src;
   });
 }
+
+const generateVCard = (nombre, telefono) => {
+  const safeNombre = nombre.replace(/[,\n]/g, ' ');
+  const safePhone = telefono.replace(/[^\d+]/g, '');
+  return `BEGIN:VCARD
+VERSION:3.0
+FN:${safeNombre}
+TEL;TYPE=CELL:${safePhone}
+END:VCARD`;
+};
+
+const downloadVCard = (nombre, telefono) => {
+  const vCard = generateVCard(nombre, telefono);
+  const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `contacto_${nombre.replace(/\s+/g, '_')}.vcf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 export default function PhotocheckViewer() {
   const { codigo } = useParams();
@@ -207,9 +230,22 @@ export default function PhotocheckViewer() {
         </div>
       </div>
 
-      <button className="pcv-toggle" onClick={() => setFlipped(!flipped)}>
-        <FaSyncAlt /> {flipped ? 'Ver Anverso' : 'Ver Reverso'}
-      </button>
+      <div className="pcv-actions">
+        <button
+          className="pcv-save-contact"
+          onClick={() => {
+            const phone = (t.telefono || '').replace(/^51/, '');
+            downloadVCard(nombre, phone);
+          }}
+          title="Guardar contacto"
+          aria-label="Guardar contacto"
+        >
+          <FaUserPlus />
+        </button>
+        <button className="pcv-toggle" onClick={() => setFlipped(!flipped)}>
+          <FaSyncAlt /> {flipped ? 'Ver Anverso' : 'Ver Reverso'}
+        </button>
+      </div>
     </div>
   );
 }

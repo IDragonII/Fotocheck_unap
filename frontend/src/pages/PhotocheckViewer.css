@@ -454,7 +454,47 @@
   z-index: 1;
 }
 
-/* ===== BOTÓN Y ESTADOS ===== */
+.pcv-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.pcv-save-contact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  animation: pcv-pulse 2s infinite;
+}
+.pcv-save-contact:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+  animation: none;
+}
+.pcv-save-contact:active {
+  transform: scale(0.95);
+}
+.pcv-save-contact svg {
+  width: 22px;
+  height: 22px;
+}
+
+@keyframes pcv-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.55);
+  }
+}
 
 .pcv-toggle {
   display: inline-flex;
