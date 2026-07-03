@@ -391,17 +391,25 @@ curl -X POST "http://localhost:8000/api/ext/tickets" \
 
 | Campo | Tipo | Requerido | Descripcion |
 |-------|------|-----------|-------------|
-| `dni` | string | Si | DNI de la persona (8 digitos) |
+| `dni` | string | No* | DNI de la persona (8 digitos). Requerido para tipos que no sean SOPORTE TECNICO |
 | `tipo_solicitud_id` | integer | Si | ID del tipo de solicitud (consultar con `GET /api/ext/tipo-solicitudes`) |
 | `vinculo` | string | No | Vinculo o referencia externa (max 100 caracteres) |
-| `motivo_solicitud` | string | No* | CREACION / RENOVACION / MODIFICACION / BAJA (solo para SOLICITUD_ALTA_BAJA) |
+| `motivo_solicitud` | string | Si* | Ver valores por tipo abajo |
 | `tipo_cuenta` | string | No* | Tipo de cuenta (ej: "Correo institucional + VPN") |
 | `sistema_especifico` | string | No* | Sistema informático (ej: "SIGAVES") |
+| `correo_personal` | string | No* | Correo electronico personal (solo para SOLICITUD DE CORREO) |
+| `oficina_sopporte` | string | Si* | Nombre de la oficina de soporte (requerido para SOPORTE TECNICO) |
+| `dificultad` | string | Si* | Nivel de dificultad: BAJA / MEDIA / ALTA / CRITICA (requerido para SOPORTE TECNICO) |
 | `adjuntos` | file[] | No | Archivos adjuntos (max 5, PDF/JPG/PNG, 10MB c/u) |
 | `adjuntos_url` | string[] | No | URLs de documentos (max 5, max 5000 chars c/u) |
-| `observaciones` | string | No | Observaciones o descripcion detallada (max 1000 caracteres) |
+| `observaciones` | string | Si* | Mensaje o descripcion del problema (requerido para SOPORTE TECNICO) |
 
-> **Nota**: Los campos marcados con * solo aplican cuando `tipo_solicitud_id` corresponde a `SOLICITUD_ALTA_BAJA`. Puede enviar archivos (`adjuntos`) o URLs (`adjuntos_url`) o ambos. Los campos `codigo`, `persona_id`, `oficina_actual_id`, `estado`, `fecha_solicitud`, `atendido_por` y `fecha_atencion` se generan/asignan automaticamente en el servidor.
+> **Nota**: Los campos marcados con * solo aplican segun el tipo de solicitud: `motivo_solicitud`, `tipo_cuenta`, `sistema_especifico` y `usuario_creado` solo para `SOLICITUD DE ALTA Y BAJA`; `correo_personal` y `motivo_solicitud` solo para `SOLICITUD DE CORREO`; `oficina_sopporte`, `dificultad` y `observaciones` son requeridos para `SOPORTE TECNICO` (no requiere DNI). Los campos `codigo`, `persona_id`, `oficina_actual_id`, `estado`, `fecha_solicitud`, `atendido_por` y `fecha_atencion` se generan/asignan automaticamente en el servidor.
+>
+> **Valores de motivo_solicitud por tipo:**
+> - `SOLICITUD DE ALTA Y BAJA`: CREACION / RENOVACION / MODIFICACION / BAJA
+> - `SOLICITUD DE CORREO`: CREACION / RESTABLECIMIENTO / ACTIVACION / OTRO
+> - `SOPORTE TECNICO`: No usa motivo_solicitud (usa `observaciones`)
 
 **Respuesta exitosa (201):**
 ```json
@@ -412,7 +420,7 @@ curl -X POST "http://localhost:8000/api/ext/tickets" \
     "vinculo": "VINC-2026-001",
     "tipo_solicitud": {
       "id": 1,
-      "nombre": "SOLICITUD_ALTA_BAJA",
+      "nombre": "SOLICITUD DE ALTA Y BAJA",
       "oficina": "Sub Oficina de Gobierno Electronico"
     },
     "estado": "PENDIENTE",
@@ -514,7 +522,7 @@ if (isset($persona['data'])) {
 // === PASO 3: Crear ticket con archivos ===
 $campos = [
     'dni' => $dni,
-    'tipo_solicitud_id' => 1,  // SOLICITUD_ALTA_BAJA
+    'tipo_solicitud_id' => 1,  // SOLICITUD DE ALTA Y BAJA
     'vinculo' => 'REF-2026-001',
     'motivo_solicitud' => 'CREACION',
     'tipo_cuenta' => 'Correo institucional + VPN',
@@ -594,7 +602,7 @@ if 'data' in persona:
 # 3. Crear ticket con archivos
 campos = {
     'dni': dni,
-    'tipo_solicitud_id': 1,  # SOLICITUD_ALTA_BAJA
+    'tipo_solicitud_id': 1,  # SOLICITUD DE ALTA Y BAJA
     'vinculo': 'REF-2026-001',
     'motivo_solicitud': 'CREACION',
     'tipo_cuenta': 'Correo institucional + VPN',

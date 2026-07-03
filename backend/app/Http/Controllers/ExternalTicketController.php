@@ -22,26 +22,55 @@ class ExternalTicketController extends Controller
         }
 
         $request->validate([
-            'dni' => 'required|string|max:8',
+            'dni' => 'nullable|string|max:8',
             'tipo_solicitud_id' => 'required|exists:tipo_solicitudes,id',
             'vinculo' => 'nullable|string|max:100',
-            'motivo_solicitud' => 'nullable|in:CREACION,RENOVACION,MODIFICACION,BAJA',
+            'motivo_solicitud' => 'nullable|string|max:255',
             'tipo_cuenta' => 'nullable|string|max:255',
             'sistema_especifico' => 'nullable|string|max:255',
             'adjuntos' => 'nullable|array|max:5',
             'adjuntos.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
             'adjuntos_url' => 'nullable|array|max:5',
             'adjuntos_url.*' => 'url|max:5000',
+            'correo_personal' => 'nullable|email|max:255',
+            'oficina_sopporte' => 'nullable|string|max:255',
+            'dificultad' => 'nullable|string|max:50',
             'observaciones' => 'nullable|string|max:1000',
         ]);
 
-        $persona = Persona::where('dni', $request->dni)->first();
+        $tipoSolicitud = TipoSolicitud::with('oficina')->find($request->tipo_solicitud_id);
+        $esSoporte = $tipoSolicitud->nombre === 'SOPORTE TECNICO';
+        $esCorreo = $tipoSolicitud->nombre === 'SOLICITUD DE CORREO';
+        $esCuenta = $tipoSolicitud->nombre === 'SOLICITUD DE ALTA Y BAJA';
 
-        if (! $persona) {
-            return response()->json(['mensaje' => 'Persona no encontrada con el DNI proporcionado'], 404);
+        if ($esSoporte) {
+            $request->validate([
+                'oficina_sopporte' => 'required|string|max:255',
+                'dificultad' => 'required|in:BAJA,MEDIA,ALTA,CRITICA',
+                'observaciones' => 'required|string|max:1000',
+            ]);
+        } elseif ($esCorreo) {
+            $request->validate([
+                'motivo_solicitud' => 'required|in:CREACION,RESTABLECIMIENTO,ACTIVACION,OTRO',
+                'correo_personal' => 'required|email|max:255',
+            ]);
+        } elseif ($esCuenta) {
+            $request->validate([
+                'motivo_solicitud' => 'required|in:CREACION,RENOVACION,MODIFICACION,BAJA',
+            ]);
+        } else {
+            if (! $request->dni) {
+                return response()->json(['mensaje' => 'El campo dni es requerido para este tipo de solicitud'], 422);
+            }
         }
 
-        $tipoSolicitud = TipoSolicitud::with('oficina')->find($request->tipo_solicitud_id);
+        $persona = null;
+        if ($request->dni) {
+            $persona = Persona::where('dni', $request->dni)->first();
+            if (! $persona) {
+                return response()->json(['mensaje' => 'Persona no encontrada con el DNI proporcionado'], 404);
+            }
+        }
 
         $ultimoCodigo = Solicitud::where('codigo', 'like', 'TICK-%')
             ->orderByDesc('id')
@@ -57,7 +86,7 @@ class ExternalTicketController extends Controller
         $solicitud = Solicitud::create([
             'codigo' => $codigo,
             'vinculo' => $request->vinculo,
-            'persona_id' => $persona->id,
+            'persona_id' => $persona?->id,
             'tipo_solicitud_id' => $tipoSolicitud->id,
             'oficina_actual_id' => $tipoSolicitud->oficina_id,
             'estado' => 'PENDIENTE',
@@ -66,6 +95,9 @@ class ExternalTicketController extends Controller
             'sistema_especifico' => $request->sistema_especifico,
             'adjuntos' => $this->guardarAdjuntos($request, $codigo),
             'observaciones' => $request->observaciones,
+            'correo_personal' => $request->correo_personal,
+            'oficina_sopporte' => $request->oficina_sopporte,
+            'dificultad' => $request->dificultad,
             'fecha_solicitud' => now(),
         ]);
 
@@ -88,6 +120,9 @@ class ExternalTicketController extends Controller
                 'estado' => $solicitud->estado,
                 'adjuntos' => $solicitud->adjuntos,
                 'observaciones' => $solicitud->observaciones,
+                'correo_personal' => $solicitud->correo_personal,
+                'oficina_sopporte' => $solicitud->oficina_sopporte,
+                'dificultad' => $solicitud->dificultad,
                 'fecha_solicitud' => $solicitud->fecha_solicitud,
             ],
         ], 201);
@@ -123,6 +158,9 @@ class ExternalTicketController extends Controller
                 'estado' => $solicitud->estado,
                 'adjuntos' => $solicitud->adjuntos,
                 'observaciones' => $solicitud->observaciones,
+                'correo_personal' => $solicitud->correo_personal,
+                'oficina_sopporte' => $solicitud->oficina_sopporte,
+                'dificultad' => $solicitud->dificultad,
                 'fecha_solicitud' => $solicitud->fecha_solicitud,
                 'fecha_atencion' => $solicitud->fecha_atencion,
                 'persona' => [

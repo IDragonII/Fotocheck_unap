@@ -13,7 +13,7 @@ class Solicitud extends Model
     protected $fillable = [
         'codigo', 'vinculo', 'persona_id', 'tipo_solicitud_id', 'estado', 'oficina_actual_id',
         'motivo_solicitud', 'tipo_cuenta', 'sistema_especifico', 'usuario_creado',
-        'adjuntos', 'observaciones', 'atendido_por', 'fecha_solicitud', 'fecha_atencion',
+        'adjuntos', 'observaciones', 'correo_personal', 'oficina_sopporte', 'dificultad', 'atendido_por', 'fecha_solicitud', 'fecha_atencion',
     ];
 
     protected function casts(): array

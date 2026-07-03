@@ -119,7 +119,15 @@ export default function Solicitudes() {
   };
 
   const esTipoCuenta = (tipoNombre) => {
-    return tipoNombre === 'SOLICITUD_ALTA_BAJA';
+    return tipoNombre === 'SOLICITUD DE ALTA Y BAJA';
+  };
+
+  const esTipoCorreo = (tipoNombre) => {
+    return tipoNombre === 'SOLICITUD DE CORREO';
+  };
+
+  const esTipoSoporte = (tipoNombre) => {
+    return tipoNombre === 'SOPORTE TECNICO';
   };
 
   return (
@@ -204,6 +212,7 @@ export default function Solicitudes() {
               <label>Tipo de Solicitud<div>{selected.tipo_solicitud?.nombre}</div></label>
               <label>Oficina Actual<div>{selected.oficina_actual?.nombre || '-'}</div></label>
               <label>Persona<div>{selected.persona?.nombres} {selected.persona?.apellidos} (DNI: {selected.persona?.dni})</div></label>
+              <label>Correo Personal<div>{selected.correo_personal || '-'}</div></label>
               <label>Fecha Solicitud<div>{formatearFecha(selected.fecha_solicitud)}</div></label>
               <label>Fecha Atencion<div>{formatearFecha(selected.fecha_atencion)}</div></label>
               <label>Atendido por<div>{selected.atendido_por?.nombres || '-'}</div></label>
@@ -214,6 +223,19 @@ export default function Solicitudes() {
                   <label>Tipo de Cuenta<div>{selected.tipo_cuenta || '-'}</div></label>
                   <label>Sistema Específico<div>{selected.sistema_especifico || '-'}</div></label>
                   <label>Usuario Creado<div>{selected.usuario_creado ? 'Sí' : selected.usuario_creado === false ? 'No' : '-'}</div></label>
+                </>
+              )}
+              {esTipoCorreo(selected.tipo_solicitud?.nombre) && (
+                <>
+                  <label>Correo Personal<div>{selected.correo_personal || '-'}</div></label>
+                  <label>Motivo<div>{selected.motivo_solicitud || '-'}</div></label>
+                </>
+              )}
+              {esTipoSoporte(selected.tipo_solicitud?.nombre) && (
+                <>
+                  <label>Oficina Soporte<div>{selected.oficina_sopporte || '-'}</div></label>
+                  <label>Dificultad<div>{selected.dificultad || '-'}</div></label>
+                  <label>Mensaje<div>{selected.observaciones || '-'}</div></label>
                 </>
               )}
               {selected.adjuntos && Array.isArray(selected.adjuntos) && selected.adjuntos.length > 0 && (

@@ -33,7 +33,9 @@ class TipoSolicitudSeeder extends Seeder
 
         // Tipos de solicitud
         $tipos = [
-            ['nombre' => 'SOLICITUD_ALTA_BAJA', 'descripcion' => 'Solicitud de alta y baja de cuentas de usuario', 'oficina_id' => $oficinaGobierno->id],
+            ['nombre' => 'SOLICITUD DE ALTA Y BAJA', 'descripcion' => 'Solicitud de alta y baja de cuentas de usuario', 'oficina_id' => $oficinaGobierno->id],
+            ['nombre' => 'SOLICITUD DE CORREO', 'descripcion' => 'Solicitud de correo ligado a gobierno electrónico', 'oficina_id' => $oficinaGobierno->id],
+            ['nombre' => 'SOPORTE TECNICO', 'descripcion' => 'Solicitud de soporte técnico', 'oficina_id' => $oficinaSoporte->id],
             ['nombre' => 'OTRO', 'descripcion' => 'Otras solicitudes', 'oficina_id' => $oficinaGobierno->id],
         ];
 

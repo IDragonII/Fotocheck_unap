@@ -1,7 +1,7 @@
 .pcv-container {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 24px;
@@ -9,6 +9,13 @@
   font-family: "Montserrat", system-ui, sans-serif;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.pcv-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .pcv-card {
@@ -456,62 +463,107 @@
 
 .pcv-actions {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
 }
 
-.pcv-save-contact {
+.pcv-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+  border-radius: 50%;
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
-  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-  animation: pcv-pulse 2s infinite;
-}
-.pcv-save-contact:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-  animation: none;
-}
-.pcv-save-contact:active {
-  transform: scale(0.95);
-}
-.pcv-save-contact svg {
-  width: 22px;
-  height: 22px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
-@keyframes pcv-pulse {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
-  }
-  50% {
-    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.55);
-  }
+.pcv-action-btn:hover {
+  transform: scale(1.12);
 }
+
+.pcv-action-btn:active {
+  transform: scale(0.95);
+}
+
+.pcv-action-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pcv-icon-rotate {
+  transform: rotate(90deg);
+}
+
+.pcv-btn-whatsapp {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35);
+}
+.pcv-btn-whatsapp:hover { box-shadow: 0 5px 18px rgba(37, 211, 102, 0.5); }
+
+.pcv-btn-call {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.35);
+}
+.pcv-btn-call:hover { box-shadow: 0 5px 18px rgba(59, 130, 246, 0.5); }
+
+.pcv-btn-sms {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+  box-shadow: 0 3px 10px rgba(249, 115, 22, 0.35);
+}
+.pcv-btn-sms:hover { box-shadow: 0 5px 18px rgba(249, 115, 22, 0.5); }
+
+.pcv-btn-email {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.35);
+}
+.pcv-btn-email:hover { box-shadow: 0 5px 18px rgba(239, 68, 68, 0.5); }
+
+.pcv-btn-contact {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  box-shadow: 0 3px 10px rgba(139, 92, 246, 0.35);
+}
+.pcv-btn-contact:hover { box-shadow: 0 5px 18px rgba(139, 92, 246, 0.5); }
+
+.pcv-btn-location {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  box-shadow: 0 3px 10px rgba(20, 184, 166, 0.35);
+}
+.pcv-btn-location:hover { box-shadow: 0 5px 18px rgba(20, 184, 166, 0.5); }
+
+.pcv-btn-website {
+  background: linear-gradient(135deg, #6366f1, #4338ca);
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.35);
+}
+.pcv-btn-website:hover { box-shadow: 0 5px 18px rgba(99, 102, 241, 0.5); }
+
+.pcv-btn-share {
+  background: linear-gradient(135deg, #64748b, #475569);
+  box-shadow: 0 3px 10px rgba(100, 116, 139, 0.35);
+}
+.pcv-btn-share:hover { box-shadow: 0 5px 18px rgba(100, 116, 139, 0.5); }
 
 .pcv-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
+  gap: 6px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 12px;
+  border-radius: 22px;
   background: linear-gradient(135deg, #2f7bc4 0%, #1a5aa0 60%, #14488a 100%);
   color: #fff;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
-  box-shadow: 0 4px 12px rgba(26, 90, 160, 0.35);
+  box-shadow: 0 3px 10px rgba(26, 90, 160, 0.35);
+  white-space: nowrap;
 }
-
+.pcv-toggle svg { width: 14px; height: 14px; }
 .pcv-toggle:hover { background: linear-gradient(135deg, #3a8ad6 0%, #14488a 60%, #0d3a70 100%); }
 .pcv-toggle:active { transform: scale(0.97); }
 
@@ -560,24 +612,48 @@
   margin: 0;
 }
 
+@media (max-width: 700px) {
+  .pcv-container {
+    flex-direction: row;
+  }
+  .pcv-action-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .pcv-action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pcv-toggle {
+    padding: 8px 14px;
+    font-size: 11px;
+  }
+}
+
 @media (max-width: 440px) {
-  .pcv-card { width: 340px; height: 540px; }
-  .pcv-photo-frame { width: 140px; height: 165px; }
+  .pcv-container { gap: 12px; padding: 16px; }
+  .pcv-card { width: 300px; height: 480px; }
+  .pcv-photo-frame { width: 120px; height: 145px; }
   .pcv-qr-placeholder { width: 80px; height: 80px; }
   .pcv-name { font-size: 12px; }
   .pcv-front-header { padding: 14px 24px 10px 14px; }
-  .pcv-logo { width: 100px; height: 120px; }
-  .pcv-university { font-size: 16px; }
-  .pcv-university small { font-size: 11px; }
-  .pcv-back-content { padding: 12px 18px; }
-  .pcv-section h4 { font-size: 11px; margin: 0 0 4px; padding-bottom: 2px; }
+  .pcv-logo { width: 90px; height: 100px; }
+  .pcv-university { font-size: 14px; }
+  .pcv-university small { font-size: 10px; }
+  .pcv-back-content { padding: 10px 14px; }
+  .pcv-section h4 { font-size: 10px; margin: 0 0 3px; padding-bottom: 2px; }
   .pcv-info-row { padding: 1px 0; }
-  .pcv-info-row span:first-child { font-size: 10px; min-width: 60px; }
-  .pcv-info-row span:last-child { font-size: 10.5px; }
-  .pcv-dni-number { font-size: 20px; }
-  .pcv-dni-tag { font-size: 9.5px; padding: 2px 8px; }
-  .pcv-back-header { padding: 12px 16px; gap: 4px; }
-  .pcv-firma-img-wrap { width: 190px; height: 100px; margin-bottom: -45px; }
-  .pcv-firma-nombre { font-size: 10px; }
-  .pcv-firma-cargo { font-size: 8.5px; }
+  .pcv-info-row span:first-child { font-size: 9px; min-width: 55px; }
+  .pcv-info-row span:last-child { font-size: 9.5px; }
+  .pcv-dni-number { font-size: 16px; }
+  .pcv-dni-tag { font-size: 8.5px; padding: 2px 6px; }
+  .pcv-back-header { padding: 10px 12px; gap: 4px; }
+  .pcv-firma-img-wrap { width: 160px; height: 80px; margin-bottom: -35px; }
+  .pcv-firma-nombre { font-size: 9px; }
+  .pcv-firma-cargo { font-size: 8px; }
+  .pcv-actions { gap: 7px; }
+  .pcv-action-btn { width: 36px; height: 36px; }
+  .pcv-action-btn svg { width: 14px; height: 14px; }
+  .pcv-toggle { padding: 7px 12px; font-size: 10px; }
+  .pcv-toggle svg { width: 12px; height: 12px; }
 }

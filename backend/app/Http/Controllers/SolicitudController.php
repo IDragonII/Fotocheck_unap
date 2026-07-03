@@ -91,12 +91,18 @@ class SolicitudController extends Controller
             'observaciones' => 'nullable|string|max:1000',
             'adjuntos' => 'nullable|string|max:5000',
             'usuario_creado' => 'nullable|boolean',
+            'correo_personal' => 'nullable|email|max:255',
+            'oficina_sopporte' => 'nullable|string|max:255',
+            'dificultad' => 'nullable|string|max:50',
         ]);
 
         $solicitud->update([
             'observaciones' => $request->observaciones ?? $solicitud->observaciones,
             'adjuntos' => $request->adjuntos ?? $solicitud->adjuntos,
             'usuario_creado' => $request->usuario_creado ?? $solicitud->usuario_creado,
+            'correo_personal' => $request->correo_personal ?? $solicitud->correo_personal,
+            'oficina_sopporte' => $request->oficina_sopporte ?? $solicitud->oficina_sopporte,
+            'dificultad' => $request->dificultad ?? $solicitud->dificultad,
         ]);
 
         $this->log($request, 'Actualizacion', 'solicitudes', $id, "Ticket actualizado: {$solicitud->codigo}");
